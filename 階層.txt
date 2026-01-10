@@ -1,0 +1,23 @@
+Levelife!~Questory~ V1
+│
+├── index.html          (入口網頁)
+│
+├── css/
+│   └── style.css       (所有樣式)
+│
+└── js/
+    ├── data.js         (資料庫：初始值、全域變數)
+    ├── view.js         (顯示層：負責所有畫面渲染)
+    ├── core.js         (核心層：存檔、導航、跨日判斷)
+    ├── main.js         (啟動層：初始化與監聽)
+    │
+    └── modules/        (功能模組)
+        ├── task.js     (任務相關邏輯)
+        ├── ach.js      (成就相關邏輯)
+        ├── assets.js     (圖片邏輯)
+        ├── avatar.js     (紙娃娃邏輯)
+        ├── debug.js     (除錯邏輯)
+        ├── shop.js     (商店與背包邏輯)
+        ├── stats.js     (屬性邏輯)
+        ├── story.js     (故事劇本邏輯)
+        └── tutorial.js    (教學邏輯)

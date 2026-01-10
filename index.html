@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LevLife V14.0 (Shell Fix)</title>
+    <link rel="stylesheet" href="css/style300.css?v=26">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div id="app-shell">
+        
+        <header id="app-hud">
+            <div class="hud-left">
+                <div class="avatar-frame" id="hud-avatar" onclick="act.navigate('stats')">
+                    <span class="u-icon-fallback">👤</span>
+                </div>
+                <div class="hud-info">
+                    <div class="name" id="hud-name">Player</div>
+                    <div class="lv-row">
+                        <span class="lv-badge">Lv.<span id="hud-lv">1</span></span>
+                        <div class="exp-bar-box">
+                            <div class="exp-bar-fill" id="hud-exp-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hud-right-column">
+                <div class="gem-row">
+                    <div class="res-pill gem-free">💎 <span id="hud-gem-free">0</span></div>
+                    <div class="res-pill gem-paid">💠 <span id="hud-gem-paid">0</span></div>
+                </div>
+                <div class="gold-row">
+                    <div class="res-pill gold">💰 <span id="hud-gold">0</span></div>
+                </div>
+            </div>
+            
+            <button class="btn-icon settings-btn" onclick="act.openModal('settings')">≡</button>
+        </header>
+
+        <main id="app-main">
+            <div id="page-lobby" class="page-shell active"></div>
+
+            <div id="page-task" class="page-shell"></div>
+
+            <div id="page-shop" class="page-shell"></div>
+
+            <div id="page-stats" class="page-shell"></div>
+            
+            <div id="global-fab" class="fab" onclick="act.editTask(null)">+</div>
+        </main>
+
+        <div id="page-story" class="page-shell layer-top"></div>
+
+        <div id="page-avatar" class="page-shell layer-top"></div>
+
+        <nav id="app-nav">
+            <button class="nav-item" onclick="act.navigate('task')" id="nav-task"><span class="icon">📋</span><span>任務</span></button>
+            <button class="nav-item active" onclick="act.navigate('lobby')" id="nav-lobby"><span class="icon">🏠</span><span>大廳</span></button>
+            <button class="nav-item" onclick="act.navigate('shop')" id="nav-shop"><span class="icon">🛒</span><span>商店</span></button>
+        </nav>
+
+        <div id="modal-portal">
+            
+            <div id="m-create" class="mask">
+                <div class="modal">
+                    <div class="m-head">
+                        <span class="m-title">任務設定</span>
+                        <button class="btn-clean" onclick="act.closeModal('create')">✕</button>
+                    </div>
+                    <div class="m-body" id="m-create-body"></div>
+                    <div class="m-foot" id="m-create-foot"></div>
+                </div>
+            </div>
+
+            <div id="m-input" class="mask" style="z-index: 9500;">
+                <div class="modal" style="max-width:320px; height:auto;">
+                    <div class="m-head modal-header-clean">
+                        <span id="m-input-title">輸入</span>
+                        <button class="btn-clean" onclick="act.closeModal('input')">✕</button>
+                    </div>
+                    <div class="m-body">
+                        <input id="m-input-val" class="inp" type="text" placeholder="...">
+                    </div>
+                    <div class="m-foot">
+                        <button class="btn-ok" id="m-input-ok">確認</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="m-system" class="mask"><div class="modal"><div class="m-body" id="sys-msg-body"></div></div></div>
+            
+            <div id="m-shop-energy" class="mask">
+                <div class="modal">
+                    <div class="m-head" style="background:#e0f2f1; color:#00695c;">
+                        ⚡ 精力補給站
+                        <button class="btn-clean" onclick="act.closeModal('shop-energy')">✕</button>
+                    </div>
+                    <div class="m-body" id="energy-shop-list" style="padding:10px;"></div>
+                </div>
+            </div>
+            
+            <div id="m-bag" class="mask">
+                <div class="modal">
+                    <div class="m-head">背包 <button class="btn-clean" onclick="act.closeModal('bag')">✕</button></div>
+                    <div class="m-body" id="bag-list"></div>
+                </div>
+            </div>
+
+            <div id="m-settings" class="mask">
+                <div class="modal">
+                    <div class="m-head">設定 <button class="btn-clean" onclick="act.closeModal('settings')">✕</button></div>
+                    <div class="m-body">
+                        <button class="btn-std" onclick="act.openPayment()">💎 儲值中心</button>
+                        <button class="btn-std" onclick="localStorage.clear();location.reload();" style="background:#ffebee;color:red;margin-top:10px;">重置遊戲</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="js/data300.js"></script>
+    <script src="js/data_scenes.js"></script>
+    <script src="js/view300.js?v=26"></script>
+    <script src="js/core300.js"></script>
+    <script src="js/modules/task300.js?v=26"></script>
+    <script src="js/modules/shop300.js"></script>
+    <script src="js/modules/stats300.js"></script>
+    <script src="js/modules/story300.js?v=26"></script>
+    <script src="js/modules/assets.js"></script>
+    <script src="js/modules/avatar300.js"></script>
+    <script src="js/modules/ach300.js"></script>
+    <script src="js/modules/tutorial300.js"></script>
+    
+    <script>window.onload = () => { if(window.Core) Core.init(); };</script>
+</body>
+</html>

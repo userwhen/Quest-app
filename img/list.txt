@@ -1,0 +1,14 @@
+adventurer_f.png
+adventurer_m.png
+adventurer_nude_f.png
+adventurer_nude_m.png
+harem_f.png
+harem_m.png
+harem_nude_f.png
+harem_nude_m.png
+Imperial Doctor.png
+knight.png
+list.bat
+list.txt
+maid.png
+wizard.png
