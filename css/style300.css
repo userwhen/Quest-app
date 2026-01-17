@@ -128,53 +128,6 @@ html, body {
 .page.active { display: flex; animation: fadeIn 0.2s; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* 1. 確保大廳頁面佔滿 100% 高度，並垂直排列 */
-#page-main {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; /* 上下撐開 */
-    padding: 20px;
-    box-sizing: border-box;
-}
-
-/* 2. 讓上方按鈕區保持原狀，或稍微往下壓 */
-.quick-area-normal {
-    flex-shrink: 0; /* 不要被壓縮 */
-    margin-bottom: 10px;
-}
-
-/* 3. [關鍵] 讓立繪區域佔據所有剩餘空間 (flex: 1) */
-.char-stage {
-    flex: 1; /* 自動填滿中間區域 */
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    /* 給個背景色方便除錯，之後可拿掉 */
-    /* background: rgba(255, 255, 255, 0.05); */
-    overflow: hidden;
-}
-
-/* 4. 讓立繪圖片或 Emoji 盡可能變大 */
-.char-stage img {
-    height: 90%; /* 佔據區域的 90% 高度 */
-    width: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); /* 加點陰影更有質感 */
-}
-
-/* 如果是 Emoji */
-.char-placeholder {
-    font-size: 10rem; /* Emoji 放大 */
-}
-
-/* 5. 確保底部按鈕 (劇情模式) 固定在最下方 */
-#btn-story-entry {
-    flex-shrink: 0; /* 不要被壓縮 */
-    margin-top: 10px;
-}
-
 #page-story, #page-avatar { padding: 0; overflow: hidden; }
 
 /* 列表類頁面移除 Padding，交給 scroller 處理 */
@@ -529,6 +482,53 @@ html, body {
     object-fit: contain;
 }
 .main-char-img:active { transform: scale(0.95); }
+
+/* 1. 確保大廳頁面佔滿 100% 高度，並垂直排列 */
+#page-main {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* 上下撐開 */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* 2. 讓上方按鈕區保持原狀，或稍微往下壓 */
+.quick-area-normal {
+    flex-shrink: 0; /* 不要被壓縮 */
+    margin-bottom: 10px;
+}
+
+/* 3. [關鍵] 讓立繪區域佔據所有剩餘空間 (flex: 1) */
+.char-stage {
+    flex: 1; /* 自動填滿中間區域 */
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* 給個背景色方便除錯，之後可拿掉 */
+    /* background: rgba(255, 255, 255, 0.05); */
+    overflow: hidden;
+}
+
+/* 4. 讓立繪圖片或 Emoji 盡可能變大 */
+.char-stage img {
+    height: 90%; /* 佔據區域的 90% 高度 */
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); /* 加點陰影更有質感 */
+}
+
+/* 如果是 Emoji */
+.char-placeholder {
+    font-size: 10rem; /* Emoji 放大 */
+}
+
+/* 5. 確保底部按鈕 (劇情模式) 固定在最下方 */
+#btn-story-entry {
+    flex-shrink: 0; /* 不要被壓縮 */
+    margin-top: 10px;
+}
 
 /* Story & Avatar Specifics */
 .story-top-bar { display: flex; align-items: center; padding: 10px; background: rgba(0,0,0,0.5); color: #fff; z-index: 10; position: relative; }

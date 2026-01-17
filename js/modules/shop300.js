@@ -537,10 +537,34 @@ Object.assign(window.view, {
         const currentEnergy = gs.story?.energy || 0;
         const maxEnergy = gs.story?.maxEnergy || 30;
 
-        const cardStyle = `background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 15px 10px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;`;
-        const titleStyle = `font-size: 1.1rem; font-weight: bold; color: #fff; margin-bottom: 5px;`;
-        const iconStyle = `font-size: 2.5rem; margin: 5px 0;`;
-        const descStyle = `font-size: 0.9rem; color: #aaa; margin-bottom: 5px;`;
+        // 1. 定義虛擬商品 (Virtual Products)
+        // 這裡我們構造符合 ui.card.item 格式的資料物件
+        const products = [
+            { 
+                id: 'stamina_s', name: '小瓶精力', icon: '🥤', 
+                desc: '回復 20 點', price: 20, currency: 'gem', // 指定貨幣為鑽石
+                qty: 999, // 給予無限庫存，避免顯示缺貨
+                action: "ShopEngine.buyStamina('small')" 
+            },
+            { 
+                id: 'stamina_m', name: '中瓶能量', icon: '🧪', 
+                desc: '回復 50 點', price: 50, currency: 'gem', 
+                qty: 999, 
+                action: "ShopEngine.buyStamina('medium')" 
+            },
+            { 
+                id: 'stamina_l', name: '皇家全補', icon: '⚡', 
+                desc: '回復 100 點', price: 100, currency: 'gem', 
+                qty: 999, 
+                action: "ShopEngine.buyStamina('large')" 
+            }
+        ];
+
+        // 2. 生成 HTML
+        // 使用 ui.card.item 生成標準樣式，第三個參數傳入購買指令
+        const cardsHtml = products.map(p => {
+            return ui.card.item(p, 'shop', p.action);
+        }).join('');
 
         const bodyHtml = `
             <div style="padding: 10px;">
@@ -552,35 +576,12 @@ Object.assign(window.view, {
                     </p>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                    <div style="${cardStyle}">
-                        <div>
-                            <div style="${iconStyle}">🥤</div>
-                            <div style="${titleStyle}">小瓶精力</div>
-                            <div style="${descStyle}">回復 20 點</div>
-                        </div>
-                        ${ui.btn.secondary('💎 20', "ShopEngine.buyStamina('small')")}
-                    </div>
-                    <div style="${cardStyle} border-color: #ffd700; background: rgba(255, 215, 0, 0.1);">
-                        <div>
-                            <div style="${iconStyle}">🧪</div>
-                            <div style="${titleStyle}" style="color:#ffd700;">中瓶能量</div>
-                            <div style="${descStyle}">回復 50 點</div>
-                        </div>
-                        ${ui.btn.primary('💎 50', "ShopEngine.buyStamina('medium')")}
-                    </div>
-                    <div style="${cardStyle}">
-                        <div>
-                            <div style="${iconStyle}">⚡</div>
-                            <div style="${titleStyle}">皇家全補</div>
-                            <div style="${descStyle}">回復 100 點</div>
-                        </div>
-                        ${ui.btn.ghost('💎 100', "ShopEngine.buyStamina('large')")}
-                    </div>
+                <div class="shop-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    ${cardsHtml}
                 </div>
                 
                 <div style="text-align:center; margin-top:20px; font-size:0.8rem; color:#666;">
-                    * 超出上限的部分將會保留
+                    * 消耗付費或免費鑽石
                 </div>
             </div>`;
 

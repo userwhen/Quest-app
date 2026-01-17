@@ -33,21 +33,38 @@ Object.assign(window.view, {
                 <div id="story-bg-emoji" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:10rem; opacity:0.2; z-index:0; pointer-events:none;"></div>
 
                 <div style="position:relative; z-index:1; display:flex; flex-direction:column; height:100%;">
-                    <div class="story-top-bar" style="height:60px; padding:10px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3);">
-                        <div class="story-res-grp" style="font-size:1.1rem; color:#ffd700;">
+                    
+                    <div class="story-top-bar" style="height:60px; padding:0 15px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.6); backdrop-filter:blur(5px); flex-shrink:0;">
+                        <div class="story-res-grp" style="font-size:1.1rem; color:#ffd700; font-weight:bold; text-shadow:1px 1px 2px #000;">
                             <span>⚡ <span id="s-energy">${energy}/${currentMax}</span></span>
                             ${ui.btn.sm('+', 'act.openStaminaShop()', 'u-btn-icon-sm')}
                         </div>
-                        <div>${ui.btn.secondary('↩ 返回', "act.navigate('main')")}</div>
+                        <div>${ui.btn.secondary('↩', "act.navigate('main')")}</div>
                     </div>
 
                     <div class="story-text-area" id="story-text-box" 
-     style="flex:1; padding:20px; overflow-y:auto; font-size:1.1rem; line-height:1.6; text-shadow:1px 1px 2px black; white-space: pre-wrap;">
-    <div id="story-content"></div>
-    <div id="story-caret" class="story-caret" style="opacity:0; text-align:center; margin-top:10px;">▼</div>
-</div>
-
-                    <div class="story-action-area" id="story-actions" style="padding:15px; background:rgba(0,0,0,0.8); max-height:40vh; overflow-y:auto; display:grid; gap:10px;">
+                         style="flex: 35; margin: 0 15px; padding: 20px; 
+                                background: rgba(0, 0, 0, 0.75); /* 深色半透明 */
+                                border: 1px solid rgba(255, 255, 255, 0.15);
+                                border-radius: 12px 12px 0 0; /* 上方圓角 */
+                                backdrop-filter: blur(10px);
+                                overflow-y: auto; 
+                                font-size: 1.15rem; line-height: 1.8; color: #eee; 
+                                text-shadow: 1px 1px 2px #000; white-space: pre-wrap;
+                                box-shadow: 0 -5px 20px rgba(0,0,0,0.5);">
+                        <div id="story-content"></div>
+                        <div id="story-caret" class="story-caret" style="opacity:0; text-align:center; margin-top:10px;">▼</div>
+                    </div>
+					
+					<div style="flex: 40; min-height: 200px; display:flex; justify-content:center; align-items:flex-end; padding-bottom:20px;">
+                        </div>
+						
+                    <div class="story-action-area" id="story-actions" 
+                         style="flex: 25; padding: 15px; 
+                                background: rgba(20, 20, 20, 0.95); 
+                                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                                display: grid; gap: 10px; align-content: start; 
+                                overflow-y: auto;">
                         </div>
                 </div>
             </div>
@@ -111,6 +128,10 @@ Object.assign(window.view, {
     updateStoryActions: (actions) => {
         const area = document.getElementById('story-actions');
         if (!area) return;
+        
+        // [關鍵] 每次更新按鈕時，自動解鎖並恢復透明度
+        area.style.pointerEvents = 'auto';
+        area.style.opacity = '1';
         area.style.gridTemplateColumns = `repeat(${actions.length}, 1fr)`;
         area.innerHTML = actions.map((btn, idx) => {
             const style = `width:100%; min-height:50px; padding:10px; font-size:1rem;`;
@@ -167,7 +188,24 @@ Object.assign(window.view, {
         const max = window.StoryEngine ? StoryEngine.calculateMaxEnergy() : 30;
         const curr = window.GlobalState?.story?.energy ?? 0;
         if(el) el.innerText = `${curr}/${max}`;
-    }
+    },
+	
+	// [新增] 鎖定按鈕區
+    lockActions: () => {
+        const area = document.getElementById('story-actions');
+        if (area) {
+            area.style.pointerEvents = 'none'; // 禁止點擊
+            area.style.opacity = '0.5';        // 視覺變灰
+        }
+    },
+    // [新增] 解鎖 (通常不需要顯式呼叫，因為 updateStoryActions 會重繪)
+    unlockActions: () => {
+        const area = document.getElementById('story-actions');
+        if (area) {
+            area.style.pointerEvents = 'auto';
+            area.style.opacity = '1';
+        }
+    },
 });
 
 // ==========================================
@@ -441,6 +479,9 @@ const StoryEngine = {
     },
 
     handleOption: (opt) => {
+        // [關鍵] 立即鎖定，防止連點
+        view.lockActions();
+
         const gs = window.GlobalState;
         
         // 1. 扣除資源
@@ -582,12 +623,37 @@ const StoryEngine = {
             }
         });
     },
+	
+	checkLevelUp: () => {
+        const gs = window.GlobalState;
+        // 假設經驗公式： Lv * 100 * 1.5 (可自行調整)
+        // 這裡提供一個簡單的遞增公式
+        if (!gs.maxExp) gs.maxExp = 100;
+        
+        while (gs.exp >= gs.maxExp) {
+            gs.exp -= gs.maxExp;
+            gs.lv = (gs.lv || 1) + 1;
+            gs.maxExp = Math.floor(gs.maxExp * 1.2); // 每級需求增加 20%
+            
+            // 升級獎勵：回滿體力
+            gs.story.energy = StoryEngine.calculateMaxEnergy();
+            
+            act.toast(`🎉 恭喜升級！目前等級 Lv.${gs.lv}`);
+            act.save(); // 升級立即存檔
+        }
+    },
 
+    // [修改] 發放獎勵時，順便檢查升級
     giveRewards: (rwds) => {
         const gs = window.GlobalState;
+        let leveledUp = false;
+        
         rwds.forEach(r => {
             if(r.type==='gold') gs.gold += r.val;
-            if(r.type==='exp') gs.exp += r.val;
+            if(r.type==='exp') {
+                gs.exp += r.val;
+                StoryEngine.checkLevelUp(); // <--- 加入這行
+            } 
             if(r.type==='energy') StoryEngine.recoverEnergy(r.val);
         });
         view.updateStoryHUD();

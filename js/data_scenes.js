@@ -206,6 +206,37 @@ window.StoryData = {
             ]
         },
         'red_hall': { text: "鳳姐笑著迎了出來：「這位稀客，快請進。」", grantsTag: ['met_feng'], end: true },
-        'red_beat': { text: "你被家丁亂棍打出，並且得罪了賈府。", grantsTag: ['offended_feng'], rewards: [{type:'energy', val:-20}], end: true }
-    }
+        'red_beat': { text: "你被家丁亂棍打出，並且得罪了賈府。", grantsTag: ['offended_feng'], rewards: [{type:'energy', val:-20}], end: true },
+		
+		// [補] 矮人地宮
+        'dwarf_mine': {
+            text: "你發現了一個古老的矮人礦坑入口，裡面傳來敲擊聲。",
+            bg: '⚒️',
+            options: [
+                { label: "進入探索", next: 'mine_explore' },
+                { label: "離開", end: true }
+            ]
+        },
+        'mine_explore': {
+            text: "坑道深處有一個巨大的齒輪鎖。",
+            options: [
+                { label: "暴力拆解 (力量)", check: { stat: 'str', val: 12 }, pass: 'mine_win', fail: 'mine_lose' },
+                { label: "解鎖 (智力)", check: { stat: 'int', val: 12 }, pass: 'mine_win', fail: 'mine_trap' }
+            ]
+        },
+        'mine_win': { text: "你打開了大門，獲得了矮人的秘銀！", rewards: [{type:'gold', val:500}], end: true },
+        'mine_lose': { text: "你弄壞了機關，什麼也沒得到。", end: true },
+        'mine_trap': { text: "觸發了毒氣陷阱！", rewards: [{type:'energy', val:-15}], end: true },
+
+        // [補] 魔戒入口
+        'lotr_start': {
+            text: "月光下，都靈之門的秘語若隱若現。",
+            bg: '🏔️',
+            options: [
+                { label: "說出 'Mellon'", check: { stat: 'int', val: 10 }, pass: 'lotr_enter', fail: 'lotr_fail' }
+            ]
+        },
+        'lotr_enter': { text: "石門緩緩打開，你進入了莫里亞礦坑。", rewards: [{type:'exp', val:100}], end: true },
+        'lotr_fail': { text: "水中的觸手怪物把你拖入了湖底...", reset: true, end: true },
+	}
 };
