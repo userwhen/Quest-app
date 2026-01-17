@@ -1,36 +1,76 @@
-/* js/modules/debug.js - V12.0 Debug Tools */
+/* js/modules/debug300.js - V10.0 (Integrated Dev Tools) */
+window.Debug = window.Debug || {};
 window.act = window.act || {};
 
-Object.assign(window.act, {
-    // [數據重置]
-    resetGame: () => {
-        if (confirm("⚠️ 確定要重置所有數據嗎？此操作無法還原！")) {
-            const key = window.GameConfig.System.SaveKey || 'SQ_V1';
-            localStorage.removeItem(key);
-            location.reload(); // 重新整理網頁以讀取 DefaultData
+// 定義 Dev 狀態 (預設關閉)
+window.GlobalState = window.GlobalState || {};
+if (!window.GlobalState.settings) window.GlobalState.settings = {};
+window.GlobalState.settings.devMode = false; // 預設關閉
+
+Object.assign(window.Debug, {
+    devClickCount: 0,
+
+    // [核心] 顯示開發者選單
+    showMenu: () => {
+        act.showSysModal('prompt', '🛠️ 開發者控制台', '', (val) => {}); 
+        const txt = document.getElementById('sys-msg');
+        
+        // 注入功能按鈕
+        txt.innerHTML = `
+            <div style="display:grid; gap:10px; grid-template-columns: 1fr 1fr;">
+                <button class="u-btn u-btn-primary" onclick="Debug.debugDay()">📅 模擬跨日</button>
+                <button class="u-btn u-btn-primary" onclick="Debug.restoreEnergy()">⚡ 精力全滿</button>
+                <button class="u-btn u-btn-secondary" onclick="Debug.toggleDevMode()">🔓 DevMode: ${window.GlobalState.settings.devMode ? 'ON' : 'OFF'}</button>
+                <button class="u-btn u-btn-secondary" onclick="location.reload()">🔄 重載</button>
+            </div>
+        `;
+        
+        // 隱藏不需要的元件
+        if(document.getElementById('sys-input')) document.getElementById('sys-input').style.display = 'none';
+        if(document.getElementById('sys-ok')) document.getElementById('sys-ok').style.display = 'none';
+        if(document.getElementById('sys-cancel')) {
+            document.getElementById('sys-cancel').style.display = 'block';
+            document.getElementById('sys-cancel').innerText = '關閉';
         }
     },
 
-    // [存盤完整性檢查]
-    validateState: () => {
-        const gs = window.GlobalState;
-        const def = window.DefaultData;
-        let fixed = false;
+    // [功能] 切換 Dev Mode (影響成就視窗顯示)
+    toggleDevMode: () => {
+        window.GlobalState.settings.devMode = !window.GlobalState.settings.devMode;
+        act.alert(`DevMode 已${window.GlobalState.settings.devMode ? '開啟' : '關閉'} (請重開成就視窗生效)`);
+        window.Debug.showMenu(); // 刷新按鈕狀態
+    },
 
-        // 遞迴檢查缺失欄位並補齊
-        const checkKeys = (target, reference) => {
-            for (let key in reference) {
-                if (target[key] === undefined) {
-                    target[key] = JSON.parse(JSON.stringify(reference[key]));
-                    fixed = true;
-                    console.warn(`Debug: Missing key [${key}] fixed.`);
-                } else if (typeof reference[key] === 'object' && reference[key] !== null) {
-                    checkKeys(target[key], reference[key]);
-                }
-            }
-        };
+    // [功能] 模擬跨日
+    debugDay: () => { 
+        const d = new Date();
+        d.setDate(d.getDate()-1); 
+        window.GlobalState.lastLoginDate = d.toISOString().split('T')[0]; 
+        act.save(); 
+        act.checkDaily(); 
+        act.alert("已模擬昨日登入，請重整或觸發檢查");
+    },
 
-        checkKeys(gs, def);
-        if (fixed) Core.save();
+    // [功能] 精力全滿 (劇情模式用)
+    restoreEnergy: () => {
+        if (!window.GlobalState.story) window.GlobalState.story = {};
+        window.GlobalState.story.energy = 100;
+        act.save();
+        act.alert("精力已恢復至 100%");
+    },
+
+    // [觸發器] 綁定在某個隱藏角落 (例如設定頁標題)
+    triggerDevMode: () => { 
+        window.Debug.devClickCount++; 
+        if (window.Debug.devClickCount >= 5) { 
+            window.Debug.devClickCount = 0;
+            window.Debug.showMenu();
+        } 
     }
+});
+
+// 掛載到 act 以便 HTML 呼叫
+Object.assign(window.act, {
+    triggerDevMode: window.Debug.triggerDevMode,
+    debugDay: window.Debug.debugDay
 });

@@ -3,138 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>LevLife V14.0 (Shell Fix)</title>
-    <link rel="stylesheet" href="css/style300.css?v=26">
+    <title>Level up! Questory V6</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="stylesheet" href="css/style300.css">
+    <link rel="manifest" href="./manifest.json">
+    
+    <style>
+        /* 針對 Quick Icon 的位置微調 */
+        
+        /* 1. 一般模式：在大廳右上角 */
+        .quick-area-normal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex; flex-direction: column; gap: 10px;
+            z-index: 50;
+        }
+
+        /* 2. 基礎模式：在屬性頁面 (避開返回鍵，疊在 Canvas 上) */
+        .quick-area-basic {
+            position: absolute;
+            top: 70px; /* 往下移，避免擋到右上角的返回鍵或 HUD */
+            right: 15px;
+            display: flex; flex-direction: column; gap: 10px;
+            z-index: 50;
+        }
+		/*之後可清除*/
+    </style>
 </head>
 <body>
 
-    <div id="app-shell">
-        
-        <header id="app-hud">
-            <div class="hud-left">
-                <div class="avatar-frame" id="hud-avatar" onclick="act.navigate('stats')">
-                    <span class="u-icon-fallback">👤</span>
-                </div>
-                <div class="hud-info">
-                    <div class="name" id="hud-name">Player</div>
-                    <div class="lv-row">
-                        <span class="lv-badge">Lv.<span id="hud-lv">1</span></span>
-                        <div class="exp-bar-box">
-                            <div class="exp-bar-fill" id="hud-exp-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="hud-right-column">
-                <div class="gem-row">
-                    <div class="res-pill gem-free">💎 <span id="hud-gem-free">0</span></div>
-                    <div class="res-pill gem-paid">💠 <span id="hud-gem-paid">0</span></div>
-                </div>
-                <div class="gold-row">
-                    <div class="res-pill gold">💰 <span id="hud-gold">0</span></div>
-                </div>
-            </div>
-            
-            <button class="btn-icon settings-btn" onclick="act.openModal('settings')">≡</button>
-        </header>
-
-        <main id="app-main">
-            <div id="page-lobby" class="page-shell active"></div>
-
-            <div id="page-task" class="page-shell"></div>
-
-            <div id="page-shop" class="page-shell"></div>
-
-            <div id="page-stats" class="page-shell"></div>
-            
-            <div id="global-fab" class="fab" onclick="act.editTask(null)">+</div>
-        </main>
-
-        <div id="page-story" class="page-shell layer-top"></div>
-
-        <div id="page-avatar" class="page-shell layer-top"></div>
-
-        <nav id="app-nav">
-            <button class="nav-item" onclick="act.navigate('task')" id="nav-task"><span class="icon">📋</span><span>任務</span></button>
-            <button class="nav-item active" onclick="act.navigate('lobby')" id="nav-lobby"><span class="icon">🏠</span><span>大廳</span></button>
-            <button class="nav-item" onclick="act.navigate('shop')" id="nav-shop"><span class="icon">🛒</span><span>商店</span></button>
-        </nav>
-
-        <div id="modal-portal">
-            
-            <div id="m-create" class="mask">
-                <div class="modal">
-                    <div class="m-head">
-                        <span class="m-title">任務設定</span>
-                        <button class="btn-clean" onclick="act.closeModal('create')">✕</button>
-                    </div>
-                    <div class="m-body" id="m-create-body"></div>
-                    <div class="m-foot" id="m-create-foot"></div>
-                </div>
-            </div>
-
-            <div id="m-input" class="mask" style="z-index: 9500;">
-                <div class="modal" style="max-width:320px; height:auto;">
-                    <div class="m-head modal-header-clean">
-                        <span id="m-input-title">輸入</span>
-                        <button class="btn-clean" onclick="act.closeModal('input')">✕</button>
-                    </div>
-                    <div class="m-body">
-                        <input id="m-input-val" class="inp" type="text" placeholder="...">
-                    </div>
-                    <div class="m-foot">
-                        <button class="btn-ok" id="m-input-ok">確認</button>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="m-system" class="mask"><div class="modal"><div class="m-body" id="sys-msg-body"></div></div></div>
-            
-            <div id="m-shop-energy" class="mask">
-                <div class="modal">
-                    <div class="m-head" style="background:#e0f2f1; color:#00695c;">
-                        ⚡ 精力補給站
-                        <button class="btn-clean" onclick="act.closeModal('shop-energy')">✕</button>
-                    </div>
-                    <div class="m-body" id="energy-shop-list" style="padding:10px;"></div>
-                </div>
-            </div>
-            
-            <div id="m-bag" class="mask">
-                <div class="modal">
-                    <div class="m-head">背包 <button class="btn-clean" onclick="act.closeModal('bag')">✕</button></div>
-                    <div class="m-body" id="bag-list"></div>
-                </div>
-            </div>
-
-            <div id="m-settings" class="mask">
-                <div class="modal">
-                    <div class="m-head">設定 <button class="btn-clean" onclick="act.closeModal('settings')">✕</button></div>
-                    <div class="m-body">
-                        <button class="btn-std" onclick="act.openPayment()">💎 儲值中心</button>
-                        <button class="btn-std" onclick="localStorage.clear();location.reload();" style="background:#ffebee;color:red;margin-top:10px;">重置遊戲</button>
-                    </div>
-                </div>
-            </div>
-
+<div id="app-frame">
+    <div id="hud"></div>
+    <div id="content-area">        
+        <div id="page-main" class="page active">
+            <div id="quick-icons-normal" class="quick-area-normal"></div>
+            <div class="main-scene"></div>
         </div>
+        <div id="page-task" class="page">
+            <div class="task-header"></div>
+            <div id="task-list"></div>
+        </div>
+        <div id="page-history" class="page history-theme">
+            <div id="history-list"></div>
+        </div>
+        <div id="page-milestone" class="page history-theme">
+            <div id="milestone-corkboard"></div>
+            <div id="milestone-list"></div>
+        </div>
+        <div id="page-shop" class="page">
+        </div>
+        <div id="page-stats" class="page">
+            <div id="quick-icons-basic" class="quick-area-basic"></div>
+
+            <div id="stats-view-container" style="width:100%; height:100%; overflow:hidden; position:relative;">
+                </div>
+        </div>
+        <div id="page-story" class="page">
+            <div class="story-top-bar">
+                <div id="story-status-text" style="flex:1;">探索: 0</div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button class="btn-story-top" onclick="act.navigate('main')">↩ 返回</button>
+                </div>
+            </div>
+            <div class="story-stage">
+                <div class="story-bg-img"></div>
+                <div class="story-char-left" id="story-player-char"></div> 
+                <div class="story-char-right" id="story-npc-char" style="display:none"></div>
+                <div class="dialogue-box-top"><p id="story-text">...</p></div>
+            </div>
+            <div class="story-ctrl"></div>
+        </div>
+
+        <div id="page-avatar" class="page">
+            <button class="btn-corner-tr" onclick="act.navigate('main')">↩ 返回</button>
+            <div class="avatar-top-stage">
+                <div class="char-placeholder" id="avatar-preview-char"></div>
+            </div>
+            <div class="avatar-bottom-panel">
+                <div class="avatar-tabs" id="wardrobe-tabs">
+                    <button class="av-tab active" onclick="act.switchWardrobeTab('hair')">髮型</button>
+                    <button class="av-tab" onclick="act.switchWardrobeTab('top')">上衣</button>
+                    <button class="av-tab" onclick="act.switchWardrobeTab('bottom')">下裝</button>
+                    <button class="av-tab" onclick="act.switchWardrobeTab('acc')">配飾</button>
+                </div>
+                <div class="wardrobe-scroll-container" id="wardrobe-list"></div>
+            </div>
+            <div class="preview-actions avatar-controls">
+                <button class="btn-cancel-avatar" onclick="act.cancelAvatarChange()">取消</button>
+                <button class="btn-save-avatar" onclick="act.saveAvatarChange()">保存</button>
+            </div>
+        </div>
+    </div> 
+	<div id="navbar">
+        <button class="nav-item" onclick="act.navigate('task')" id="nav-task"><i class="u-icon">📋</i> 任務</button>
+        <button class="nav-item active" onclick="act.navigate('main')" id="nav-main"><i class="u-icon">🏠</i> 大廳</button>
+        <button class="nav-item" onclick="act.navigate('shop')" id="nav-shop"><i class="u-icon">🛒</i> 商店</button>
     </div>
 
-    <script src="js/data300.js"></script>
-    <script src="js/data_scenes.js"></script>
-    <script src="js/view300.js?v=26"></script>
-    <script src="js/core300.js"></script>
-    <script src="js/modules/task300.js?v=26"></script>
-    <script src="js/modules/shop300.js"></script>
-    <script src="js/modules/stats300.js"></script>
-    <script src="js/modules/story300.js?v=26"></script>
-    <script src="js/modules/assets.js"></script>
-    <script src="js/modules/avatar300.js"></script>
-    <script src="js/modules/ach300.js"></script>
-    <script src="js/modules/tutorial300.js"></script>
+    <button class="fab" id="global-fab" onclick="act.handleFab()">+</button>
     
-    <script>window.onload = () => { if(window.Core) Core.init(); };</script>
+    <div id="tuto-spotlight"></div>
+</div> 
+
+<script src="js/data300.js"></script>
+<script src="js/data_scenes.js"></script> 
+<script src="js/core300.js"></script>
+<script src="js/modules/settings300.js"></script>
+<script src="js/view300.js"></script>
+
+<script src="js/modules/stats300.js"></script>
+<script src="js/modules/task300.js"></script>
+<script src="js/modules/ach300.js"></script>
+<script src="js/modules/shop300.js"></script>
+
+<script src="js/modules/assets.js"></script>
+<script src="js/modules/story300.js"></script> 
+<script src="js/modules/avatar300.js"></script>
+<script src="js/modules/tutorial30.js"></script>
+<script src="js/modules/debug300.js"></script>
+<script src="js/main300.js"></script>
+
 </body>
 </html>

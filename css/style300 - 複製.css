@@ -1,16 +1,15 @@
 /* ==========================================================================
-   SelfQuest V15.3 Consolidated CSS (Final Structure)
+   SelfQuest V13.0 Consolidated CSS (Final Structure)
    ========================================================================== */
 
 /* --- 1. Config & Variables --- */
 :root {
     /* Theme Colors */
     --bg-frame: #1a100c;
-    --bg-main: #f7e7ce; /* 羊皮紙主色 */
     --bg-wood: #5d4037;
     --bg-wood-dark: #3e2723;
     --bg-wood-light: #8d6e63;
-    --bg-panel: #f7e7ce; 
+    --bg-panel: #f7e7ce; /* 羊皮紙色 */
     --bg-card: #ffffff;
     --bg-input: #ffffff;
 
@@ -123,12 +122,12 @@ html, body {
     display: none; flex-direction: column;
     overflow-y: auto; overflow-x: hidden;
     padding: 20px; padding-bottom: 100px; 
-    background-color: var(--bg-main);
+    background-image: radial-gradient(#d7ccc8 1px, transparent 1px);
+    background-size: 20px 20px;
 }
 .page.active { display: flex; animation: fadeIn 0.2s; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* 大廳容器特殊設定 */
 #page-main {
     width: 100%;
     height: 100%;
@@ -138,25 +137,24 @@ html, body {
     justify-content: flex-end; /* 讓角色稍微靠下 */
     align-items: center;       /* 左右置中 */
     overflow: hidden;          /* 防止跑版 */
-    padding: 0;
+    
+    /* 這裡可以加個暫時的背景色或圖片，確認它有撐開 */
+    /* background: url('your-bg.jpg') center/cover; */
 } 
-
 #page-story, #page-avatar { padding: 0; overflow: hidden; }
-
-/* 列表類頁面移除 Padding，交給 scroller 處理 */
+/* 列表類頁面移除底部 Padding，交給 scroller 處理 */
 #page-task.active, #page-shop.active, #page-stats.active, #page-history.active, #page-milestone.active { 
     overflow: hidden !important; 
     padding: 0 !important; 
 }
 #task-list, #ach-list, #history-list, #milestone-list, #stats-view-container {
     width: 100%;
-    height: 100%; 
+    height: 100%; /* 關鍵：撐滿父容器 */
     display: flex;
     flex-direction: column;
-    padding: 0; 
-    overflow: hidden; 
+    padding: 0; /* 讓內部的 scroller 控制留白 */
+    overflow: hidden; /* 防止雙重捲軸 */
 }
-
 /* --- 4. Universal Components (u-) --- */
 
 /* Buttons */
@@ -174,24 +172,6 @@ html, body {
 .u-btn-ghost { background: transparent; border: 1px dashed #aaa; color: var(--text-main); }
 .u-btn-paper { background: #fff; border: 1px solid var(--bg-wood-light); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .u-btn-sm { padding: 4px 10px; font-size: 0.85rem; }
-
-/* [New] 通用圖示方形按鈕 (取代舊的 icon-btn) */
-.u-icon-btn {
-    width: 48px; height: 48px; 
-    background: #fff;
-    border: 2px solid var(--bg-wood);
-    border-radius: 12px;
-    font-size: 1.5rem;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 0 var(--bg-wood-dark);
-    cursor: pointer;
-    transition: all 0.1s;
-    color: var(--text-main);
-}
-.u-icon-btn:active {
-    transform: translateY(4px);
-    box-shadow: 0 0 0 var(--bg-wood-dark);
-}
 
 .u-btn-icon { width: 30px; height: 30px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: background 0.2s; }
 .u-btn-icon:active { background: rgba(255,255,255,0.2); }
@@ -269,99 +249,6 @@ html, body {
 }
 .fab:active { transform: scale(0.95); }
 #global-fab.fab-gold { background: linear-gradient(135deg, #ffb300, #ffca28) !important; border-color: #ffd54f !important; box-shadow: 0 0 15px rgba(255, 179, 0, 0.6) !important; color: #3e2723 !important; }
-
-/* [New] NPC Stage Component (左圖右文) */
-.npc-stage-container {
-    display: flex;
-    align-items: flex-end; /* 底部對齊 */
-    padding: 15px;
-    background-size: cover;
-    background-position: center;
-    border-bottom: 2px solid var(--bg-wood-dark);
-    position: relative;
-    min-height: 120px;
-}
-.npc-avatar-box {
-    width: 70px;
-    height: 70px;
-    margin-right: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 3rem; /* Emoji 大小 */
-    filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
-    flex-shrink: 0;
-}
-.npc-avatar-box img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-.npc-dialogue-box {
-    flex: 1; /* 自適應寬度 */
-    position: relative;
-    background: #fff;
-    border: 2px solid var(--bg-wood);
-    border-radius: 12px;
-    padding: 10px 14px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    min-height: 50px;
-    display: flex;
-    align-items: center;
-}
-/* 對話框小尖角 */
-.npc-dialogue-box::before {
-    content: '';
-    position: absolute;
-    left: -10px;
-    bottom: 15px;
-    border-width: 10px 10px 10px 0;
-    border-style: solid;
-    border-color: transparent var(--bg-wood) transparent transparent;
-}
-.npc-dialogue-box::after {
-    content: '';
-    position: absolute;
-    left: -7px;
-    bottom: 15px;
-    border-width: 10px 10px 10px 0;
-    border-style: solid;
-    border-color: transparent #fff transparent transparent;
-}
-.npc-text {
-    color: var(--text-main);
-    font-weight: bold;
-    font-size: 0.95rem;
-    line-height: 1.4;
-}
-
-/* [New] Item Card (商品/物品卡片) */
-.item-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    cursor: pointer;
-    transition: transform 0.1s;
-    position: relative;
-}
-.item-card:active { transform: scale(0.96); border-color: var(--color-gold); }
-.item-icon { font-size: 2rem; margin-bottom: 5px; }
-.item-name { font-weight: bold; font-size: 0.9rem; margin-bottom: 4px; text-align: center; line-height: 1.2; height: 1.2em; overflow: hidden; }
-.item-meta { font-size: 0.8rem; color: #666; display: flex; align-items: center; gap: 4px; }
-.item-badge { position: absolute; top: 5px; right: 5px; background: #d32f2f; color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 8px; }
-/* Grid 排版容器 */
-.shop-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 10px;
-    padding: 15px;
-    width: 100%;
-}
 
 /* --- 5. Standard Card System (.std-card) --- */
 .std-card {
@@ -470,170 +357,9 @@ html, body {
 .master-badge { width: 48px; height: 48px; background: #fff8e1; border: 2px solid #ffb300; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
 
 /* [View: Main & Quick] */
-/* [Fix] 配合 HTML 新結構的 Quick Icons 定位 */
-.quick-area-normal, .quick-area-basic {
-    position: absolute; right: 15px;
-    display: flex; flex-direction: column; gap: 10px;
-    z-index: 50;
-}
-.quick-area-normal { top: 15px; }
-.quick-area-basic { top: 70px; }
-
-.char-stage {
-    flex: 1; 
-    display: flex; align-items: center; justify-content: center;
-    width: 100%;
-    position: relative;
-    /* 點擊穿透問題修正 */
-    pointer-events: auto;
-}
-/* 立繪圖片樣式 */
-.main-char-img {
-    height: 85%; /* 根據螢幕高度自動調整 */
-    max-width: 90%;
-    object-fit: contain;
-    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.4));
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-.main-char-img:active { transform: scale(0.95); }
-
-/* Story & Avatar Specifics */
+.quick-icons { position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; gap: 10px; z-index: 500; }
+.icon-btn { width: 44px; height: 44px; background: #fff; border: 2px solid var(--bg-wood); border-radius: 12px; font-size: 1.4rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; }
 .story-top-bar { display: flex; align-items: center; padding: 10px; background: rgba(0,0,0,0.5); color: #fff; z-index: 10; position: relative; }
 .avatar-bottom-panel { position: absolute; bottom: 0; width: 100%; height: 260px; background: #deb887; border-top: 4px solid var(--bg-wood); display: flex; flex-direction: column; z-index: 50; }
 .avatar-controls { display: none; position: absolute; bottom: 15px; right: 15px; gap: 10px; z-index: 100; }
 #page-avatar.active .avatar-controls { display: flex; }
-
-/* --- Story Mode V2 Layout --- */
-
-/* 1. 頁面容器：垂直 Flex，填滿螢幕 */
-.story-page-layout {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    background: #222; /* 深色背景預設 */
-    color: #fff;
-    position: relative;
-}
-
-/* 2. 頂部資訊列 (Top Bar) */
-.story-top-bar {
-    flex-shrink: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 15px;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(5px);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    z-index: 10;
-}
-
-.story-res-grp {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-    color: #ffd700; /* 金色/黃色 */
-}
-
-/* 3. 對話框區 (上半部，佔據剩餘空間的 40%~50%) */
-.story-text-area {
-    flex: 1; /* 會伸縮 */
-    min-height: 200px;
-    padding: 20px;
-    background: rgba(0,0,0,0.3);
-    overflow-y: auto;
-    font-size: 1rem;
-    line-height: 1.6;
-    text-shadow: 1px 1px 2px black;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start; /* 文字從上往下 */
-}
-
-/* 下頁箭頭 (Caret) */
-.story-caret {
-    align-self: flex-end;
-    margin-top: auto; /* 推到底部 */
-    animation: bounce 1s infinite;
-    font-size: 1.2rem;
-    color: #ccc;
-}
-
-/* 4. 立繪區 (下半部，固定高度或比例) */
-.story-stage-area {
-    flex: 1; /* 與對話區平分，或根據內容調整 */
-    position: relative;
-    background-size: cover;
-    background-position: center;
-    overflow: hidden;
-    border-top: 1px solid rgba(255,255,255,0.1);
-}
-
-.story-char-img {
-    position: absolute;
-    bottom: 0;
-    height: 90%; /* 立繪高度 */
-    width: auto;
-    filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
-    transition: transform 0.3s, filter 0.3s;
-}
-.char-left { left: 5%; }
-.char-right { right: 5%; }
-
-/* 5. 底部行動區 (Action Area) */
-.story-action-area {
-    flex-shrink: 0;
-    padding: 15px;
-    background: rgba(0,0,0,0.8);
-    display: grid; /* 關鍵：使用 Grid */
-    gap: 10px; /* 按鈕間距 */
-    /* grid-template-columns 會由 JS 動態設定 */
-}
-
-/* --- 2D 動畫特效 --- */
-
-/* 數字滾動框 */
-.d20-box-2d {
-    display: inline-block;
-    padding: 5px 10px;
-    border: 2px solid #fff;
-    border-radius: 8px;
-    font-weight: bold;
-    font-family: monospace;
-    font-size: 1.2rem;
-    background: rgba(0,0,0,0.5);
-    margin-right: 8px;
-}
-
-/* 震動動畫 (Shake) */
-@keyframes shake {
-    0% { transform: translate(1px, 1px) rotate(0deg); }
-    10% { transform: translate(-1px, -2px) rotate(-1deg); }
-    20% { transform: translate(-3px, 0px) rotate(1deg); }
-    30% { transform: translate(3px, 2px) rotate(0deg); }
-    40% { transform: translate(1px, -1px) rotate(1deg); }
-    50% { transform: translate(-1px, 2px) rotate(-1deg); }
-    60% { transform: translate(-3px, 1px) rotate(0deg); }
-    70% { transform: translate(3px, 1px) rotate(-1deg); }
-    80% { transform: translate(-1px, -1px) rotate(1deg); }
-    90% { transform: translate(1px, 2px) rotate(0deg); }
-    100% { transform: translate(1px, -2px) rotate(-1deg); }
-}
-
-.anim-shake {
-    animation: shake 0.5s;
-    animation-iteration-count: infinite;
-    color: #ffeb3b; /* 震動時黃色 */
-    border-color: #ffeb3b;
-}
-
-.anim-pop {
-    animation: pop 0.3s ease-out;
-}
-@keyframes pop {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.3); }
-    100% { transform: scale(1); }
-}

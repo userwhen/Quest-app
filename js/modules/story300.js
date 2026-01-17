@@ -1,301 +1,448 @@
-/* js/modules/story300.js - V36.1 Ultimate Fix (Button Display Restored) */
+/* js/modules/story300.js - V18.0 Ultimate Edition */
 window.act = window.act || {};
 
-// =========================================================================
-// [Engine] 劇情引擎核心
-// =========================================================================
-const StoryEngine = {
-    
-    // [Init] 進入模式
-    enterMode: () => {
-        Core.navigate('story');
-        if(window.view && view.renderStoryPage) view.renderStoryPage();
-        
-        StoryEngine.updateEnergyUI(); 
+// ==========================================
+// [Part 1] 視圖 (View) - 全螢幕 & 動態背景
+// ==========================================
+window.view = window.view || {};
 
-        if (!window.TempState.currentSceneData) {
-             StoryEngine.renderTextAndOptions("你來到了冒險的起點。準備好探索了嗎？", [
-                 { label: '🔍 探索 (5精力)', onclick: 'act.exploreAdventure()' }
-             ]);
-        } else {
-             const data = window.TempState.currentSceneData;
-             if (data.options && data.options.length > 0) {
-                 StoryEngine.showOptions(data.options);
-             } else {
-                 StoryEngine.showContinue(data);
-             }
+Object.assign(window.view, {
+    renderStoryPage: () => {
+        const container = document.getElementById('page-story');
+        if (!container) return;
+        
+        const gs = window.GlobalState;
+        const currentMax = window.StoryEngine ? StoryEngine.calculateMaxEnergy() : 30;
+        const energy = Math.min(gs.story?.energy ?? currentMax, currentMax);
+        
+        // 預設背景 (之後會被 updateBackground 覆蓋)
+        const bgStyle = `background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('assets/bg_dungeon.jpg');`; 
+        
+        // 全螢幕布局 (配合 Core 隱藏 Navbar)
+        const layoutStyle = `
+            display: flex; flex-direction: column; 
+            width: 100%; height: 100%; 
+            background: #111; color: #fff; 
+            overflow: hidden; box-sizing: border-box;
+            position: relative;
+        `;
+        
+        container.innerHTML = `
+            <div style="${layoutStyle}" id="story-layout-inner">
+                <div id="story-bg-layer" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:0; background-size:cover; background-position:center; ${bgStyle} transition: all 0.5s;"></div>
+                <div id="story-bg-emoji" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:10rem; opacity:0.2; z-index:0; pointer-events:none;"></div>
+
+                <div style="position:relative; z-index:1; display:flex; flex-direction:column; height:100%;">
+                    <div class="story-top-bar" style="height:60px; padding:10px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3);">
+                        <div class="story-res-grp" style="font-size:1.1rem; color:#ffd700;">
+                            <span>⚡ <span id="s-energy">${energy}/${currentMax}</span></span>
+                            ${ui.btn.sm('+', 'act.openStaminaShop()', 'u-btn-icon-sm')}
+                        </div>
+                        <div>${ui.btn.secondary('↩ 返回', "act.navigate('main')")}</div>
+                    </div>
+
+                    <div class="story-text-area" id="story-text-box" 
+     style="flex:1; padding:20px; overflow-y:auto; font-size:1.1rem; line-height:1.6; text-shadow:1px 1px 2px black; white-space: pre-wrap;">
+    <div id="story-content"></div>
+    <div id="story-caret" class="story-caret" style="opacity:0; text-align:center; margin-top:10px;">▼</div>
+</div>
+
+                    <div class="story-action-area" id="story-actions" style="padding:15px; background:rgba(0,0,0,0.8); max-height:40vh; overflow-y:auto; display:grid; gap:10px;">
+                        </div>
+                </div>
+            </div>
+        `;
+        
+        // 若無內容，顯示探索按鈕
+        if (!document.getElementById('story-content').innerHTML) {
+             view.updateStoryActions([{ label: '🔍 開始探索', onclick: 'act.exploreAdventure()', style: 'primary' }]);
         }
     },
 
-    // [Core 1] 探索
+    updateBackground: (bg) => {
+        const bgLayer = document.getElementById('story-bg-layer');
+        const emojiLayer = document.getElementById('story-bg-emoji');
+        if (!bgLayer || !bg) return;
+
+        // 判斷是 Emoji 還是 圖片路徑
+        // 簡單判斷：如果包含 .jpg/.png 或是路徑符號 / 則為圖片，否則視為 Emoji
+        if (bg.includes('.') || bg.includes('/')) {
+            bgLayer.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${bg}')`;
+            emojiLayer.innerText = '';
+        } else {
+            // 是 Emoji
+            bgLayer.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8))`; // 純黑底
+            emojiLayer.innerText = bg;
+        }
+    },
+
+    appendStoryText: (text) => {
+        const box = document.getElementById('story-content');
+        const caret = document.getElementById('story-caret');
+        const area = document.getElementById('story-actions');
+        if (!box) return;
+
+        // 鎖定操作
+        if (area) { area.style.pointerEvents = 'none'; area.style.opacity = '0.7'; }
+        if (caret) caret.style.opacity = '0';
+
+        box.innerHTML = ''; // 清空舊文字 (翻頁感)
+        
+        // [修正] 不再替換 <br>，直接拆分字串，依靠 CSS pre-wrap 處理換行
+        let i = 0;
+        const chars = text.split(''); 
+        
+        function type() {
+            if (i < chars.length) {
+                box.textContent += chars[i]; // 使用 textContent 防止 HTML 標籤被拆解顯示
+                i++;
+                const container = document.getElementById('story-text-box');
+                if(container) container.scrollTop = container.scrollHeight; // 自動捲動到底部
+                setTimeout(type, 15); // 打字速度
+            } else {
+                // 打字結束，解鎖
+                if (caret) caret.style.opacity = '1';
+                if (area) { area.style.pointerEvents = 'auto'; area.style.opacity = '1'; }
+            }
+        }
+        type();
+    },
+
+    updateStoryActions: (actions) => {
+        const area = document.getElementById('story-actions');
+        if (!area) return;
+        area.style.gridTemplateColumns = `repeat(${actions.length}, 1fr)`;
+        area.innerHTML = actions.map((btn, idx) => {
+            const style = `width:100%; min-height:50px; padding:10px; font-size:1rem;`;
+            let btnClass = 'u-btn-primary';
+            if(btn.style === 'danger') btnClass = 'u-btn-danger';
+            if(btn.style === 'secondary') btnClass = 'u-btn-secondary';
+            
+            // 支援 onclick 是字串或函式
+            const click = typeof btn.onclick === 'string' ? `onclick="${btn.onclick}"` : `id="s-btn-${idx}"`;
+            const disabled = btn.disabled ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '';
+            return `<button class="u-btn ${btnClass}" style="${style}" ${click} ${disabled}>${btn.label}</button>`;
+        }).join('');
+
+        // 綁定函式事件
+        actions.forEach((btn, idx) => {
+            if (typeof btn.onclick === 'function' && !btn.disabled) {
+                document.getElementById(`s-btn-${idx}`).onclick = btn.onclick;
+            }
+        });
+    },
+
+    showD20Roll: (data, cb) => {
+        const box = document.getElementById('story-content');
+        const rollId = 'd20-' + Date.now();
+        box.innerHTML += `
+            <div style="margin-top:20px; border:1px dashed #666; padding:10px; text-align:center;">
+                <div style="font-size:0.9rem; color:#aaa;">${data.attrName} 檢定 (DC ${data.dc})</div>
+                <div id="${rollId}" style="font-size:2rem; font-weight:bold; margin:10px 0;">🎲 ...</div>
+            </div>
+        `;
+        document.getElementById('story-text-box').scrollTop = 9999;
+
+        // 2D 震動動畫
+        let steps = 0;
+        const el = document.getElementById(rollId);
+        const timer = setInterval(() => {
+            el.innerText = Math.floor(Math.random()*20)+1;
+            el.style.transform = `translate(${Math.random()*4-2}px, ${Math.random()*4-2}px)`;
+            steps++;
+            if(steps > 15) {
+                clearInterval(timer);
+                el.style.transform = 'none';
+                const color = data.isSuccess ? '#4caf50' : '#f44336';
+                el.innerHTML = `<span style="color:${color}">${data.total}</span> <span style="font-size:1rem; color:#888;">(🎲${data.roll} + ${data.bonus})</span>`;
+                box.innerHTML += `<div style="text-align:center; color:${color}; font-weight:bold;">${data.isSuccess ? "✨ 成功！" : "💀 失敗..."}</div>`;
+                document.getElementById('story-text-box').scrollTop = 9999;
+                setTimeout(cb, 500);
+            }
+        }, 60);
+    },
+
+    updateStoryHUD: () => {
+        const el = document.getElementById('s-energy');
+        const max = window.StoryEngine ? StoryEngine.calculateMaxEnergy() : 30;
+        const curr = window.GlobalState?.story?.energy ?? 0;
+        if(el) el.innerText = `${curr}/${max}`;
+    }
+});
+
+// ==========================================
+// [Part 2] 引擎核心 (Engine) - V18 Logic
+// ==========================================
+const StoryEngine = {
+    
+    // 1. 初始化
+    enterMode: () => {
+        const gs = window.GlobalState;
+        act.navigate('story'); 
+
+        // 資料結構初始化
+        if (!gs.story) gs.story = { energy: 30, maxEnergy: 30, dailyExploreCount: 0 };
+        if (!gs.story.deck) gs.story.deck = [];
+        if (!gs.story.discard) gs.story.discard = [];
+        if (!gs.story.archive) gs.story.archive = [];
+        if (!gs.story.tags) gs.story.tags = [];
+        if (typeof gs.story.mainProgress === 'undefined') gs.story.mainProgress = 0;
+
+        // 強制更新上限
+        StoryEngine.calculateMaxEnergy();
+        if (typeof gs.story.energy === 'undefined') gs.story.energy = gs.story.maxEnergy;
+
+        StoryEngine.checkEnergyLoop();
+        view.renderStoryPage();
+        
+        // 若無進行中劇本，顯示閒置
+        if (!window.TempState.currentSceneData) {
+            StoryEngine.showIdleText();
+        }
+    },
+
+    calculateMaxEnergy: () => {
+        const gs = window.GlobalState;
+        const lv = Math.max(1, gs.lv || 1);
+        let max = 30 + ((lv - 1) * 2); 
+        if (max > 100) max = 100;
+        if(gs.story) gs.story.maxEnergy = max;
+        return max;
+    },
+
+    // 2. 探索 (每日機率遞減 + 扣體)
     explore: () => {
         const gs = window.GlobalState;
-        
         if (gs.story.energy < 5) {
-            act.toast("⚡ 精力不足 (需要 5 點)");
-            return;
+            act.toast("⚡ 精力不足");
+            act.openStaminaShop(); return;
         }
 
+        // 每日重置
         const today = new Date().toDateString();
         if (gs.story.lastExploreDate !== today) {
             gs.story.dailyExploreCount = 0;
             gs.story.lastExploreDate = today;
         }
 
+        // 扣除
         gs.story.energy -= 5;
         gs.story.dailyExploreCount++;
-        Core.save();
-        StoryEngine.updateEnergyUI();
+        act.save();
+        view.updateStoryHUD();
 
-        const chance = Math.max(0.1, 1.0 - (gs.story.dailyExploreCount * 0.01));
-        console.log(`🎲 [Story] 探索機率: ${(chance*100).toFixed(0)}% (今日第 ${gs.story.dailyExploreCount} 次)`);
+        // 機率檢定 (愈探索愈難遇到事件)
+        // 初始 100%，每次 -5%，最低 10%
+        const chance = Math.max(0.1, 1.0 - (gs.story.dailyExploreCount * 0.05));
         
-        view.updateStoryActions([]); // 防止連點
+        console.log(`🎲 探索機率: ${(chance*100).toFixed(0)}%`);
 
-        if (Math.random() > chance) {
-            StoryEngine.renderEmptyEvent();
-        } else {
+        if (Math.random() <= chance) {
             StoryEngine.drawAndPlay();
+        } else {
+            // 沒抽中，顯示無事發生
+            StoryEngine.showIdleText();
         }
     },
 
-    // [Core 2] 抽牌系統
+   // 3. 抽牌核心 (洗牌 + 主線注入 + 立即存檔)
     drawAndPlay: () => {
         const gs = window.GlobalState;
         const mode = gs.settings.mode || 'adventurer';
-        
-        // 1. 隨機劇本 (30%)
-        if (Math.random() < 0.3) {
-            const rndScene = StoryEngine.generateRandomScene();
-            if (rndScene) {
-                StoryEngine.startSceneData(rndScene);
-                return;
-            }
-        }
 
-        // 2. 準備牌庫
-        if (!gs.story.deck) gs.story.deck = [];
-        if (!gs.story.discard) gs.story.discard = [];
-        if (!gs.story.archive) gs.story.archive = [];
-        
+        // 1. 安全檢查
         if (!window.StoryData || !window.StoryData.pools) {
-            act.toast("資料庫載入中..."); return;
+            console.error("❌ StoryData 未載入");
+            return view.appendStoryText("❌ 資料庫載入失敗");
         }
-        
         const poolData = window.StoryData.pools[mode];
-        if (!poolData) {
-            StoryEngine.renderEmptyEvent("此模式尚無劇情...");
-            return;
-        }
+        if (!poolData) return act.toast(`❌ 模式 [${mode}] 無劇本資料`);
 
-        // 3. 洗牌機制 (剩餘 < 20%)
-        const total = gs.story.deck.length + gs.story.discard.length;
-        if (gs.story.deck.length === 0 || (total > 0 && gs.story.deck.length / total < 0.2)) {
-            if (gs.story.discard.length > 0) {
-                console.warn(`🔀 [Deck] 洗牌觸發！回收 ${gs.story.discard.length} 張。`);
-                act.toast("🔄 故事重組中...(洗牌)");
-                gs.story.deck = [...gs.story.deck, ...gs.story.discard];
-                gs.story.discard = [];
-                gs.story.deck.sort(() => Math.random() - 0.5);
-            } else if (gs.story.deck.length === 0) {
-                gs.story.deck = [...poolData.common];
-            }
-        }
-
-        // 4. 抽牌迴圈
-        let cardId = null;
-        let attempts = 0;
-        while (attempts < gs.story.deck.length + 5) {
-            if (gs.story.deck.length === 0) break;
+        // =========================================
+        // [關鍵修復] A. 主線嚴格序列注入
+        // =========================================
+        if (poolData.main) {
+            const nextMainId = poolData.main[gs.story.mainProgress];
             
-            const candidateId = gs.story.deck.shift();
-            const sceneData = window.StoryData.scenes[candidateId];
-            
-            // 主線鎖
-            if (poolData.main.includes(candidateId) || (sceneData && sceneData.index !== undefined)) {
-                if (sceneData.index === gs.story.mainProgress) {
-                    cardId = candidateId;
-                    break;
-                } else {
-                    gs.story.deck.push(candidateId);
+            if (nextMainId) {
+                // 檢查三大區域，確保這張卡真的不在循環中
+                const inArchive = gs.story.archive.includes(nextMainId);
+                const inDeck = gs.story.deck.includes(nextMainId);
+                const inDiscard = gs.story.discard.includes(nextMainId);
+                
+                if (!inArchive && !inDeck && !inDiscard) {
+                    // 隨機插入 Deck
+                    const insertIdx = Math.floor(Math.random() * (gs.story.deck.length + 1));
+                    gs.story.deck.splice(insertIdx, 0, nextMainId);
+                    
+                    // [Fix] 注入後立即存檔！防止重整後消失導致無限注入
+                    act.save(); 
+                    console.log("📜 主線注入 (已存檔):", nextMainId);
                 }
-            } else {
-                cardId = candidateId;
-                break;
             }
-            attempts++;
         }
 
-        if (cardId) {
+        // B. 洗牌檢核
+        const total = gs.story.deck.length + gs.story.discard.length;
+        if ((gs.story.deck.length === 0 && gs.story.discard.length > 0) || 
+            (total > 0 && gs.story.deck.length / total < 0.2 && gs.story.discard.length > 0)) {
+            
+            gs.story.deck = [...gs.story.deck, ...gs.story.discard];
+            gs.story.discard = [];
+            // Fisher-Yates Shuffle
+            for (let i = gs.story.deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [gs.story.deck[i], gs.story.deck[j]] = [gs.story.deck[j], gs.story.deck[i]];
+            }
+            act.save(); // 洗牌後也存檔
+            act.toast("🔀 牌庫重洗");
+        } else if (gs.story.deck.length === 0 && gs.story.discard.length === 0) {
+            // 初次或重置
+            if (poolData.common) gs.story.deck = [...poolData.common];
+            act.save();
+        }
+
+        // C. 抽牌
+        const cardId = gs.story.deck.shift();
+        act.save(); // 抽出後存檔，確保該卡從 Deck 移除
+
+        console.log("🃏 抽到卡片:", cardId, "| 剩餘牌庫:", gs.story.deck.length);
+
+        if (cardId === 'GEN_TEMPLATE') {
+            StoryEngine.generateScene();
+        } else if (cardId) {
             StoryEngine.startScene(cardId);
         } else {
-            StoryEngine.renderEmptyEvent("探索了很久，但什麼也沒發現...");
+            StoryEngine.showIdleText();
         }
     },
 
-// [New] 隨機劇本生成器 (已改用 StoryData 資料源)
-    generateRandomScene: () => {
-        // ▼ 修改點 1：指向新的模板位置
-        const templates = window.StoryData.randomTemplates; 
-        const validTemplates = templates.filter(t => !t.reqTag || StoryEngine.hasTag(t.reqTag));
-        
-        if (validTemplates.length === 0) return null;
-        const t = validTemplates[Math.floor(Math.random() * validTemplates.length)];
-        
-        let finalText = t.text;
-        let grantedTags = t.grantsTag ? [...t.grantsTag] : [];
-        let finalRewards = t.rewards ? JSON.parse(JSON.stringify(t.rewards)) : [];
+    // 4. 生成器 (Procedural Generation)
+    generateScene: () => {
+        const templates = window.StoryData.randomTemplates || [];
+        if (templates.length === 0) return StoryEngine.showIdleText();
 
-        // ▼ 修改點 2：指向新的詞庫位置
-        const wb = window.StoryData.wordBank; 
-
-        const regex = /\{(\w+)(\.(\w+))?\}/g;
-        finalText = finalText.replace(regex, (match, type, _, subtype) => {
-            const category = wb[type]; // 改從 wb (StoryData.wordBank) 讀取
-            if (!category) return match;
-            let candidates = Array.isArray(category) ? category : (category[subtype || 'common'] || category['common']);
-            const selected = StoryEngine.pickWeightedWord(candidates);
-            if (selected.grant) grantedTags.push(selected.grant);
-            return selected.text;
+        // 隨機選模板 (可加入權重邏輯)
+        const tpl = templates[Math.floor(Math.random() * templates.length)];
+        
+        // 解析文字 {Type.category}
+        let finalType = 'normal';
+        let finalText = tpl.text.replace(/\{(\w+)\.(\w+)\}/g, (match, type, cat) => {
+            return StoryEngine.getWord(type, cat);
+        }).replace(/\{(\w+)\}/g, (match, type) => {
+            // 處理 {Item} 這種沒寫 category 的，預設 common
+            return StoryEngine.getWord(type, 'common');
         });
 
-        // ▼ 修改點 3：指向新的 Action 詞庫位置
-        const actions = [...wb.Action]; 
-        for (let i = actions.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [actions[i], actions[j]] = [actions[j], actions[i]];
-        }
-        
-        const createOption = (action) => {
-            return { 
-                label: action.text, 
-                onclick: () => {
-                    StoryEngine.renderTextAndOptions(
-                        `\n\n> 你決定${action.text}。\n事情就這樣告一段落了。`, 
-                        [{ label: "▼ 繼續", onclick: () => StoryEngine.finishScene(null) }],
-                        true 
-                    );
+        // 檢查 Extensions (Tag 觸發)
+        let options = [{ label: "繼續", end: true }];
+        if (tpl.extensions) {
+            for (const ext of tpl.extensions) {
+                if (StoryEngine.hasTag(ext.reqTag)) {
+                    finalText += ext.appendText;
+                    options = ext.options; // 覆蓋選項
+                    break; 
                 }
-            };
-        };
-
-        return {
-            id: `rnd_${Date.now()}`,
-            text: finalText,
-            realOptions: [ createOption(actions[0]), createOption(actions[1]) ],
-            grantsTag: grantedTags,
-            rewards: finalRewards
-        };
-    },
-
-    pickWeightedWord: (candidates) => {
-        let totalWeight = 0;
-        const weightedList = candidates.map(w => {
-            let weight = w.baseWeight || 10;
-            if (w.req && !StoryEngine.hasTag(w.req)) return null;
-            if (w.bonus && StoryEngine.hasTag(w.bonus.tag)) weight += w.bonus.add;
-            totalWeight += weight;
-            return { word: w, weight: weight };
-        }).filter(item => item !== null);
-
-        if (weightedList.length === 0) return { text: "???" };
-        let random = Math.random() * totalWeight;
-        for (const item of weightedList) {
-            if (random < item.weight) return item.word;
-            random -= item.weight;
+            }
         }
-        return weightedList[0].word;
+
+        // 構建場景物件
+        const generatedScene = {
+            id: 'generated_' + Date.now(),
+            text: finalText,
+            options: options,
+            bg: '🎲' // 隨機劇本標示
+        };
+
+        StoryEngine.renderSceneContent(generatedScene);
     },
 
-    // [Core 3] 場景渲染
+    getWord: (type, cat) => {
+        const wb = window.StoryData.wordBank;
+        if (!wb || !wb[type]) return "???";
+        
+        let list = wb[type][cat];
+        if (!list && Array.isArray(wb[type])) list = wb[type]; // 兼容 Item: []
+        if (!list) return "???";
+
+        // 權重計算
+        let totalW = 0;
+        const candidates = list.map(item => {
+            let w = item.weight || item.baseWeight || 1;
+            // 動態權重 bonus
+            if (item.bonus && StoryEngine.hasTag(item.bonus.tag)) {
+                w += item.bonus.add;
+            }
+            totalW += w;
+            return { text: item.text, w: w };
+        });
+
+        let rnd = Math.random() * totalW;
+        for (const cand of candidates) {
+            rnd -= cand.w;
+            if (rnd <= 0) return cand.text;
+        }
+        return candidates[0].text;
+    },
+
+    // 5. 啟動場景 (變體 + 背景)
     startScene: (sceneId) => {
         const scene = StoryEngine.getVariant(sceneId);
-        if (!scene) return;
-        StoryEngine.startSceneData(scene);
+        if (!scene) {
+            console.error("Missing scene:", sceneId);
+            return StoryEngine.showIdleText();
+        }
+
+        // 動態背景
+        if (scene.bg) view.updateBackground(scene.bg);
+        else view.updateBackground('assets/bg_dungeon.jpg'); // 預設
+
+        StoryEngine.renderSceneContent(scene);
     },
 
-    startSceneData: (scene) => {
+    // 6. 渲染與互動
+    renderSceneContent: (scene) => {
         window.TempState.currentSceneData = scene;
-        let fullText = scene.title ? `【${scene.title}】\n${scene.text}` : scene.text;
         
+        // 標題與內文
+        let txt = scene.title ? `【${scene.title}】\n` : "";
+        txt += scene.text;
+        view.appendStoryText(txt);
+
+        // 獎勵與標籤
         if (scene.rewards) StoryEngine.giveRewards(scene.rewards);
         if (scene.grantsTag) StoryEngine.grantTags(scene.grantsTag);
-        
-        const actualOptions = scene.realOptions || scene.options;
-        StoryEngine.renderTextAndOptions(fullText, actualOptions, false);
-    },
 
-    showContinue: (scene) => {
-        const actualOptions = scene.realOptions || scene.options;
-        view.updateStoryActions([{
-            label: "▼",
-            onclick: () => {
-                StoryEngine.showOptions(actualOptions);
+        // 選項處理
+        if (!scene.options || scene.options.length === 0) {
+            // 若無選項且是 end，顯示離開
+            if (scene.end) {
+                view.updateStoryActions([{ label: '🔍 繼續探索', onclick: 'act.exploreAdventure()', style: 'primary' }]);
+                StoryEngine.finishScene(scene);
+            } else {
+                // 異常防呆
+                view.updateStoryActions([{ label: '離開', onclick: 'act.exploreAdventure()' }]);
             }
-        }]);
-    },
-
- // [Visual] 統一渲染入口 (關鍵修復：補回選項顯示邏輯 + 安全網)
-    renderTextAndOptions: (text, options, append = false) => {
-        const textBox = document.getElementById('story-text');
-        
-        if (!append && textBox) textBox.innerHTML = '';
-        view.updateStoryActions([]); // 1. 先隱藏所有按鈕
-
-        if (window.view && view.appendStoryText) {
-            // 2. 開始打字
-            view.appendStoryText(text, () => {
-                // 3. 打字結束，決定顯示什麼按鈕
-                if (options && options.length > 0) {
-                    // 正常情況：顯示劇本指定的選項
-                    StoryEngine.showOptions(options);
-                } else {
-                    // 【關鍵修改】安全網：如果沒有選項，顯示預設的繼續按鈕
-                    // 這樣玩家按下去後會呼叫 finishScene(null)，從而顯示「繼續探索」
-                    StoryEngine.showOptions([{ 
-                        label: "▼", 
-                        onclick: () => StoryEngine.finishScene(null) 
-                    }]);
-                }
-            });
-        }
-    },
-
-    showOptions: (options) => {
-        if (!options || options.length === 0) {
-            StoryEngine.finishScene(null);
             return;
         }
 
-        const buttons = [];
-        options.forEach(opt => {
-            let locked = false;
-            if (opt.req) {
-                const gs = window.GlobalState;
-                if (opt.req.gold && gs.gold < opt.req.gold) locked = true;
-                if (opt.req.energy && gs.story.energy < opt.req.energy) locked = true;
-                if (opt.req.gem && (gs.freeGem + gs.paidGem) < opt.req.gem) locked = true;
-            }
+        const buttons = scene.options.map(opt => {
+            // 資源檢查 (Tag 檢查)
+            let disabled = false;
+            let label = opt.label || opt.text;
             
-            let clickHandler = null;
-            if (typeof opt.onclick === 'function') {
-                clickHandler = opt.onclick;
-            } else if (typeof opt.onclick === 'string') {
-                if (opt.onclick.includes('act.')) {
-                    clickHandler = () => { eval(opt.onclick); }; 
-                } else {
-                    clickHandler = () => StoryEngine.handleOption(opt);
-                }
-            } else {
-                clickHandler = () => StoryEngine.handleOption(opt);
+            // Item 檢查 (Tag)
+            if (opt.req) {
+                if (opt.req.gold && window.GlobalState.gold < opt.req.gold) disabled = true;
+                if (opt.req.tag && !StoryEngine.hasTag(opt.req.tag)) disabled = true; // [新] 道具Tag檢查
             }
 
-            buttons.push({
-                label: opt.label,
-                style: opt.style || 'normal',
-                disabled: locked,
-                onclick: clickHandler
-            });
+            return {
+                label: label,
+                style: opt.style || 'primary',
+                disabled: disabled,
+                onclick: () => StoryEngine.handleOption(opt)
+            };
         });
         view.updateStoryActions(buttons);
     },
@@ -303,228 +450,188 @@ const StoryEngine = {
     handleOption: (opt) => {
         const gs = window.GlobalState;
         
-        if (opt.req) {
-            if (opt.req.gold) gs.gold -= opt.req.gold;
-            if (opt.req.energy) gs.story.energy -= opt.req.energy; 
-            if (opt.req.gem) {
-                let cost = opt.req.gem;
-                if (gs.freeGem >= cost) { gs.freeGem -= cost; }
-                else { cost -= gs.freeGem; gs.freeGem = 0; gs.paidGem -= cost; }
-            }
-            StoryEngine.updateEnergyUI(); 
-            if (window.view) view.renderHUD();
+        // 1. 扣除資源
+        if (opt.req && opt.req.gold) {
+            gs.gold -= opt.req.gold;
+            view.updateStoryHUD();
         }
 
+        // 2. 優先處理 Check (檢定)
+        if (opt.check) return StoryEngine.runInlineCheck(opt);
+
+        // 3. 處理 Next (跳轉)
         if (opt.next) {
             const nextScene = StoryEngine.getVariant(opt.next);
-            if (nextScene.type === 'check') {
-                StoryEngine.runCheck(nextScene);
+            if (nextScene) {
+                if (nextScene.type === 'check') StoryEngine.runCheck(nextScene);
+                else StoryEngine.renderSceneContent(nextScene);
             } else {
-                StoryEngine.startSceneData(nextScene);
+                console.error("Next scene not found:", opt.next);
+                StoryEngine.finishScene(); // 防呆
             }
-        } else {
-            StoryEngine.finishScene(opt);
+        } 
+        // 4. 處理 End (結束)
+        else {
+            // 無論有沒有寫 end: true，只要沒有 next/check 都視為結束
+            StoryEngine.finishScene();
         }
     },
 
-    // [Core 3.5] 檢定系統 (純文字版)
-    runCheck: (scene) => {
-        const check = scene.check;
-        const gs = window.GlobalState;
-        
-        StoryEngine.renderTextAndOptions(scene.text + "\n", [], true); 
+    // 7. 檢定 (Inline)
+    runInlineCheck: (opt) => {
+        const check = opt.check;
+        const attrKey = (check.stat || check.attr).toUpperCase();
+        const attrVal = (window.GlobalState.attrs?.[attrKey]?.v) || 1;
+        const roll = Math.floor(Math.random()*20)+1;
+        const bonus = Math.floor(attrVal / 2);
+        const total = roll + bonus;
+        const isSuccess = total >= (check.val || check.dc);
 
-        setTimeout(() => {
-            const attrVal = gs.attrs[check.attr] ? gs.attrs[check.attr].v : 1;
-            const d20 = Math.floor(Math.random() * 20) + 1;
-            const bonus = Math.floor(attrVal * 1.5);
-            const isPass = (d20 + bonus) >= check.dc;
-            const attrName = (window.DefaultData && window.DefaultData.attrs) ? window.DefaultData.attrs[check.attr].name : check.attr;
-
-            const resultText = `\n> 🎲 檢定 ${attrName}\n> 擲骰: ${d20} + 加值 ${bonus} = ${d20+bonus} (難度: ${check.dc})\n> 結果: ${isPass ? '✅ 成功' : '❌ 失敗'}\n`;
-            
-            const nextId = isPass ? check.pass : check.fail;
+        view.showD20Roll({
+            attrName: attrKey, roll, bonus, total, dc: check.val||check.dc, isSuccess
+        }, () => {
+            const nextId = isSuccess ? opt.pass : opt.fail;
             const nextScene = StoryEngine.getVariant(nextId);
-            
-            StoryEngine.renderTextAndOptions(resultText, [{
-                label: "▼ 繼續",
-                onclick: () => {
-                    if (nextScene.reset) { 
-                        StoryEngine.deathReset(); 
-                    } else { 
-                        StoryEngine.startSceneData(nextScene); 
-                    } 
-                }
-            }], true);
-
-        }, 800);
+            if(nextScene) {
+                if(nextScene.reset) StoryEngine.deathReset();
+                else StoryEngine.renderSceneContent(nextScene);
+            } else {
+                StoryEngine.finishScene();
+            }
+        });
     },
 
-    // [Fix] 結束時保留最後一段劇情文字
-    finishScene: (opt) => {
+    // 8. 結束與歸檔
+    finishScene: () => {
         const gs = window.GlobalState;
         const currentId = window.TempState.currentSceneId;
-        
-        if (currentId && !currentId.startsWith('rnd_')) {
-            const poolData = window.StoryData.pools[gs.settings.mode || 'adventurer'];
-            if (poolData && poolData.main.includes(currentId)) {
-                gs.story.archive.push(currentId);
-                gs.story.mainProgress++;
-            } else {
+        const mode = gs.settings.mode || 'adventurer';
+        const poolData = window.StoryData.pools[mode];
+
+        // 歸檔邏輯
+        if (currentId) {
+            // 如果是主線 ID -> 歸檔 (Archive) 並推進進度
+            if (poolData && poolData.main && poolData.main.includes(currentId)) {
+                if (!gs.story.archive.includes(currentId)) {
+                    gs.story.archive.push(currentId);
+                    gs.story.mainProgress = (gs.story.mainProgress || 0) + 1;
+                    console.log("📜 主線完成，進度推進至:", gs.story.mainProgress);
+                }
+            } else if (!currentId.startsWith('generated_')) {
+                // 如果是普通卡 (且不是隨機生成的) -> 棄牌 (Discard)
                 gs.story.discard.push(currentId);
             }
         }
-        Core.save();
+        
+        // 清除暫存
         window.TempState.currentSceneData = null;
+        window.TempState.currentSceneId = null;
+
+        // [關鍵修復] 必須追加一段文字，並刷新按鈕
+        act.save();
         
-        // ▼ 修改重點：傳入 null，告訴 renderEmptyEvent 不要覆蓋畫面文字
-        StoryEngine.renderEmptyEvent(null);
-    },
-
-    renderEmptyEvent: (text) => {
-        const textBox = document.getElementById('story-text');
-        
-        // 如果有傳入文字 (例如 "什麼也沒發現") 才覆蓋，傳入 null 就不動
-        if (text && textBox) {
-            textBox.innerHTML = text;
-        } else if (text === undefined && textBox) {
-             // 如果完全沒傳參數，給個預設值
-            textBox.innerHTML = "你探索了一番，但什麼也沒發現...";
-        }
-
-        // ▼ 修改重點：設定結束後的按鈕文字 ▼
-        view.updateStoryActions([{ 
-            label: '🔍 繼續探索',  // 這裡設定您想要的按鈕文字
-            onclick: 'act.exploreAdventure()' 
-        }]);
-    },
-
-    // [Fix] 修復版 giveRewards：只改數值，不重繪介面
-    giveRewards: (rewards) => {
-        const gs = window.GlobalState;
-        if (!rewards) return;
-        let msg = [];
-        rewards.forEach(r => {
-            const val = parseInt(r.val, 10) || 0;
-
-            if (r.type === 'gold') { gs.gold += val; msg.push(`💰 ${val}`); }
-            if (r.type === 'exp') { gs.exp += val; msg.push(`✨ ${val} Exp`); }
+        // 延遲一點點，讓玩家感覺到"結束了"
+        setTimeout(() => {
+            const box = document.getElementById('story-content');
+            if(box) {
+                box.innerHTML += '<div style="margin-top:20px; color:#888; text-align:center;">(探索結束)</div>';
+                document.getElementById('story-text-box').scrollTop = 9999;
+            }
             
-            // ▼▼▼ 修改重點：直接改數據，不呼叫 act.recoverEnergy ▼▼▼
-            if (r.type === 'energy') { 
-                gs.story.energy = Math.min(gs.story.maxEnergy, gs.story.energy + val);
-                // 手動更新左上角文字 (假設 story300.js 有定義 updateEnergyUI，若無請手動補上或直接操作 DOM)
-                const el = document.getElementById('story-energy-val');
-                if(el) {
-                    el.innerText = `${gs.story.energy}/${gs.story.maxEnergy}`;
-                    el.style.color = gs.story.energy < 5 ? '#ff5252' : '#ffb74d';
-                }
-                msg.push(`⚡ ${val > 0 ? '+' : ''}${val}`);
-            }
-            // ▲▲▲ 修改結束 ▲▲▲
-
-            if (r.type === 'item') {
-                const item = gs.shop.npc.find(i => i.id === r.id);
-                if (item) {
-                    gs.bag.push({ ...item, uid: Date.now() });
-                    msg.push(`📦 ${item.name}`);
-                }
-            }
-            if (r.type === 'stat' && gs.attrs[r.key]) {
-                gs.attrs[r.key].v += val;
-                msg.push(`🆙 ${gs.attrs[r.key].name} +${val}`);
-            }
-        });
-        
-        if (msg.length > 0) act.toast("獲得: " + msg.join(", "));
-        if (window.view && view.renderHUD) view.renderHUD();
+            // 顯示「繼續探索」按鈕
+            view.updateStoryActions([{ 
+                label: '🔍 繼續探索', 
+                onclick: 'act.exploreAdventure()', 
+                style: 'primary' 
+            }]);
+        }, 200);
     },
 
-    updateEnergyUI: () => {
-        const el = document.getElementById('story-energy-val');
-        const gs = window.GlobalState;
-        if(el && gs) {
-            el.innerText = `${gs.story.energy}/${gs.story.maxEnergy}`;
-            el.style.color = gs.story.energy < 5 ? '#ff5252' : '#ffb74d';
-        }
-    },
-
-    getVariant: (sceneId) => {
-        if (!window.StoryData || !window.StoryData.scenes) return null;
-        const raw = window.StoryData.scenes[sceneId];
+    // Helpers
+    getVariant: (id) => {
+        const raw = window.StoryData.scenes[id];
         if (!raw) return null;
-        if (raw.type === 'variant') {
+        if (raw.type === 'variant' && raw.variants) {
             for (const v of raw.variants) {
-                if (StoryEngine.hasTag(v.reqTag)) return { ...v, id: sceneId };
+                if (StoryEngine.hasTag(v.reqTag)) return { ...v, id: id };
             }
-            return { ...raw.default, id: sceneId };
+            return { ...raw.default, id: id };
         }
-        return { ...raw, id: sceneId };
+        return { ...raw, id: id };
     },
 
-    hasTag: (tag) => {
-        return window.GlobalState.story.tags && window.GlobalState.story.tags.includes(tag);
-    },
-
+    hasTag: (tag) => (window.GlobalState.story.tags || []).includes(tag),
+    
     grantTags: (tags) => {
-        if (!tags) return;
+        const gs = window.GlobalState;
+        if(!gs.story.tags) gs.story.tags = [];
         tags.forEach(t => {
-            if (!StoryEngine.hasTag(t)) {
-                window.GlobalState.story.tags.push(t);
-                act.toast(`🏷️ 獲得特性: [${t}]`);
+            if(!gs.story.tags.includes(t)) {
+                gs.story.tags.push(t);
+                act.toast(`🏷️ [${t}]`);
             }
         });
     },
-    
+
+    giveRewards: (rwds) => {
+        const gs = window.GlobalState;
+        rwds.forEach(r => {
+            if(r.type==='gold') gs.gold += r.val;
+            if(r.type==='exp') gs.exp += r.val;
+            if(r.type==='energy') StoryEngine.recoverEnergy(r.val);
+        });
+        view.updateStoryHUD();
+        act.toast("獲得獎勵");
+    },
+
+    showIdleText: () => {
+        const texts = window.GameConfig.StoryIdleTexts;
+        const txt = texts[Math.floor(Math.random()*texts.length)];
+        view.appendStoryText(txt);
+        view.updateStoryActions([{ label: '🔍 繼續探索', onclick: 'act.exploreAdventure()', style: 'primary' }]);
+    },
+
+    checkEnergyLoop: () => {
+        const gs = window.GlobalState;
+        if(!gs) return;
+        if(!gs.story.lastRecTime) gs.story.lastRecTime = Date.now();
+        const doCheck = () => {
+            const now = Date.now();
+            const elapsed = now - gs.story.lastRecTime;
+            if(elapsed >= 360000) { // 6min
+                const pt = Math.floor(elapsed/360000);
+                if(pt > 0) {
+                    StoryEngine.recoverEnergy(pt);
+                    gs.story.lastRecTime = now - (elapsed % 360000);
+                    act.save();
+                }
+            }
+        };
+        doCheck();
+        setInterval(doCheck, 10000);
+    },
+
+    recoverEnergy: (pt) => {
+        const gs = window.GlobalState;
+        const max = StoryEngine.calculateMaxEnergy();
+        gs.story.energy = Math.min(max, gs.story.energy + pt);
+        if(window.view) view.updateStoryHUD();
+    },
+
     deathReset: () => {
         const gs = window.GlobalState;
-        act.alert("☠️ 你已死亡！\n\n劇情進度已重置，但你的等級與能力保留了下來。");
-        
+        act.alert("☠️ 你已死亡！劇情進度重置。");
         gs.story.energy = gs.story.maxEnergy;
         gs.story.tags = [];
         gs.story.deck = [];
         gs.story.discard = [];
         gs.story.archive = [];
         gs.story.mainProgress = 0;
-
-        const pool = window.StoryData.pools[gs.settings.mode || 'adventurer'];
-        gs.story.deck = [...pool.common];
-
-        for (let lv = 5; lv <= gs.lv; lv += 5) {
-            const idx = (lv / 5) - 1;
-            if (pool.main[idx]) {
-                gs.story.deck.push(pool.main[idx]);
-            }
-        }
-
-        Core.save();
-        StoryEngine.updateEnergyUI();
-        view.updateStoryActions([{ label: '🔄 重新開始', onclick: 'act.exploreAdventure()' }]);
+        act.save();
+        view.renderStoryPage();
     }
 };
 
 window.act.enterStoryMode = StoryEngine.enterMode;
 window.act.exploreAdventure = StoryEngine.explore;
 window.StoryEngine = StoryEngine;
-
-// [Fix] 強制精力恢復邏輯
-window.act.recoverEnergy = (val) => {
-    const gs = window.GlobalState;
-    gs.story.energy = Math.min(gs.story.maxEnergy, gs.story.energy + val);
-    StoryEngine.updateEnergyUI(); 
-    act.toast(`⚡ 精力恢復 ${val}`);
-
-    const scene = window.TempState.currentSceneData;
-    if (scene) {
-        // 如果有暫存的真實選項，優先顯示
-        const opts = scene.realOptions || scene.options;
-        if(opts && opts.length > 0) {
-            StoryEngine.showOptions(opts);
-        } else {
-             // 否則顯示離開
-             view.updateStoryActions([{ label: '🔍 繼續探索', onclick: 'act.exploreAdventure()' }]);
-        }
-    } else {
-        view.updateStoryActions([{ label: '🔍 繼續探索', onclick: 'act.exploreAdventure()' }]);
-    }
-};
