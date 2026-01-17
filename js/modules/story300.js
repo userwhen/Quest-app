@@ -225,22 +225,19 @@ const StoryEngine = {
             gs.story.lastExploreDate = today;
         }
 
-        // 扣除
         gs.story.energy -= 5;
         gs.story.dailyExploreCount++;
         act.save();
         view.updateStoryHUD();
 
-        // 機率檢定 (愈探索愈難遇到事件)
-        // 初始 100%，每次 -5%，最低 10%
-        const chance = Math.max(0.1, 1.0 - (gs.story.dailyExploreCount * 0.05));
+        // [修改] 機率調整：每次減少 0.1% (0.001)，最低 10%
+        const chance = Math.max(0.1, 1.0 - (gs.story.dailyExploreCount * 0.001));
         
-        console.log(`🎲 探索機率: ${(chance*100).toFixed(0)}%`);
+        console.log(`🎲 探索機率: ${(chance*100).toFixed(1)}% (次數: ${gs.story.dailyExploreCount})`);
 
         if (Math.random() <= chance) {
             StoryEngine.drawAndPlay();
         } else {
-            // 沒抽中，顯示無事發生
             StoryEngine.showIdleText();
         }
     },
@@ -250,32 +247,22 @@ const StoryEngine = {
         const gs = window.GlobalState;
         const mode = gs.settings.mode || 'adventurer';
 
-        // 1. 安全檢查
-        if (!window.StoryData || !window.StoryData.pools) {
-            console.error("❌ StoryData 未載入");
-            return view.appendStoryText("❌ 資料庫載入失敗");
-        }
+        if (!window.StoryData || !window.StoryData.pools) return view.appendStoryText("❌ 資料庫載入失敗");
         const poolData = window.StoryData.pools[mode];
         if (!poolData) return act.toast(`❌ 模式 [${mode}] 無劇本資料`);
 
-        // =========================================
-        // [關鍵修復] A. 主線嚴格序列注入
-        // =========================================
+        // A. 主線嚴格序列注入
         if (poolData.main) {
             const nextMainId = poolData.main[gs.story.mainProgress];
-            
             if (nextMainId) {
-                // 檢查三大區域，確保這張卡真的不在循環中
                 const inArchive = gs.story.archive.includes(nextMainId);
                 const inDeck = gs.story.deck.includes(nextMainId);
                 const inDiscard = gs.story.discard.includes(nextMainId);
                 
+                // 確保這張卡完全不在循環中才注入
                 if (!inArchive && !inDeck && !inDiscard) {
-                    // 隨機插入 Deck
                     const insertIdx = Math.floor(Math.random() * (gs.story.deck.length + 1));
                     gs.story.deck.splice(insertIdx, 0, nextMainId);
-                    
-                    // [Fix] 注入後立即存檔！防止重整後消失導致無限注入
                     act.save(); 
                     console.log("📜 主線注入 (已存檔):", nextMainId);
                 }
@@ -286,27 +273,28 @@ const StoryEngine = {
         const total = gs.story.deck.length + gs.story.discard.length;
         if ((gs.story.deck.length === 0 && gs.story.discard.length > 0) || 
             (total > 0 && gs.story.deck.length / total < 0.2 && gs.story.discard.length > 0)) {
-            
             gs.story.deck = [...gs.story.deck, ...gs.story.discard];
             gs.story.discard = [];
-            // Fisher-Yates Shuffle
+            // Shuffle
             for (let i = gs.story.deck.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [gs.story.deck[i], gs.story.deck[j]] = [gs.story.deck[j], gs.story.deck[i]];
             }
-            act.save(); // 洗牌後也存檔
+            act.save();
             act.toast("🔀 牌庫重洗");
         } else if (gs.story.deck.length === 0 && gs.story.discard.length === 0) {
-            // 初次或重置
             if (poolData.common) gs.story.deck = [...poolData.common];
             act.save();
         }
 
         // C. 抽牌
         const cardId = gs.story.deck.shift();
-        act.save(); // 抽出後存檔，確保該卡從 Deck 移除
+        act.save(); 
 
-        console.log("🃏 抽到卡片:", cardId, "| 剩餘牌庫:", gs.story.deck.length);
+        // [關鍵修復] 記錄這張卡是「根源卡」，之後不管跳轉到哪，結算都認這張
+        window.TempState.rootSceneId = cardId;
+
+        console.log("🃏 抽到卡片:", cardId);
 
         if (cardId === 'GEN_TEMPLATE') {
             StoryEngine.generateScene();
@@ -387,7 +375,9 @@ const StoryEngine = {
 
     // 5. 啟動場景 (變體 + 背景)
     startScene: (sceneId) => {
+        // getVariant 會回傳 { ...raw, id: sceneId } <--- 這裡會把 ID 塞進物件
         const scene = StoryEngine.getVariant(sceneId);
+        
         if (!scene) {
             console.error("Missing scene:", sceneId);
             return StoryEngine.showIdleText();
@@ -395,15 +385,18 @@ const StoryEngine = {
 
         // 動態背景
         if (scene.bg) view.updateBackground(scene.bg);
-        else view.updateBackground('assets/bg_dungeon.jpg'); // 預設
+        else view.updateBackground('assets/bg_dungeon.jpg');
 
         StoryEngine.renderSceneContent(scene);
     },
 
-    // 6. 渲染與互動
     renderSceneContent: (scene) => {
+        // [關鍵修復] 必須明確記錄當前場景 ID，結算時才找得到人
         window.TempState.currentSceneData = scene;
+        if (scene.id) window.TempState.currentSceneId = scene.id; 
         
+        console.log("🎬 渲染場景:", scene.id); // Debug 用，確認 ID 有被記錄
+
         // 標題與內文
         let txt = scene.title ? `【${scene.title}】\n` : "";
         txt += scene.text;
@@ -418,7 +411,7 @@ const StoryEngine = {
             // 若無選項且是 end，顯示離開
             if (scene.end) {
                 view.updateStoryActions([{ label: '🔍 繼續探索', onclick: 'act.exploreAdventure()', style: 'primary' }]);
-                StoryEngine.finishScene(scene);
+                StoryEngine.finishScene(); // 這裡不傳參數，讓它讀 TempState
             } else {
                 // 異常防呆
                 view.updateStoryActions([{ label: '離開', onclick: 'act.exploreAdventure()' }]);
@@ -434,7 +427,7 @@ const StoryEngine = {
             // Item 檢查 (Tag)
             if (opt.req) {
                 if (opt.req.gold && window.GlobalState.gold < opt.req.gold) disabled = true;
-                if (opt.req.tag && !StoryEngine.hasTag(opt.req.tag)) disabled = true; // [新] 道具Tag檢查
+                if (opt.req.tag && !StoryEngine.hasTag(opt.req.tag)) disabled = true;
             }
 
             return {
@@ -482,6 +475,13 @@ const StoryEngine = {
         const check = opt.check;
         const attrKey = (check.stat || check.attr).toUpperCase();
         const attrVal = (window.GlobalState.attrs?.[attrKey]?.v) || 1;
+        
+        // [新增] 鎖定按鈕，防止重複點擊
+        const actionArea = document.getElementById('story-actions');
+        if (actionArea) actionArea.style.pointerEvents = 'none';
+
+        view.appendStoryText(`\n(進行 ${attrKey} 檢定...)`);
+
         const roll = Math.floor(Math.random()*20)+1;
         const bonus = Math.floor(attrVal / 2);
         const total = roll + bonus;
@@ -490,8 +490,12 @@ const StoryEngine = {
         view.showD20Roll({
             attrName: attrKey, roll, bonus, total, dc: check.val||check.dc, isSuccess
         }, () => {
+            // [新增] 動畫結束後解鎖 (雖然之後會刷新按鈕，但習慣上解鎖比較安全)
+            if (actionArea) actionArea.style.pointerEvents = 'auto';
+
             const nextId = isSuccess ? opt.pass : opt.fail;
             const nextScene = StoryEngine.getVariant(nextId);
+            
             if(nextScene) {
                 if(nextScene.reset) StoryEngine.deathReset();
                 else StoryEngine.renderSceneContent(nextScene);
@@ -501,50 +505,56 @@ const StoryEngine = {
         });
     },
 
-    // 8. 結束與歸檔
+    // 8. 結束與歸檔 (使用 RootID)
     finishScene: () => {
         const gs = window.GlobalState;
-        const currentId = window.TempState.currentSceneId;
+        // [關鍵] 結算時只看最初抽到的那張卡 (Root ID)，忽略中間跳轉的過程卡
+        const rootId = window.TempState.rootSceneId;
         const mode = gs.settings.mode || 'adventurer';
         const poolData = window.StoryData.pools[mode];
 
-        // 歸檔邏輯
-        if (currentId) {
-            // 如果是主線 ID -> 歸檔 (Archive) 並推進進度
-            if (poolData && poolData.main && poolData.main.includes(currentId)) {
-                if (!gs.story.archive.includes(currentId)) {
-                    gs.story.archive.push(currentId);
+        console.log(`🏁 結算根源卡: ${rootId}`);
+
+        if (rootId) {
+            let isMain = false;
+            // 檢查 RootID 是否為主線
+            if (poolData && poolData.main && poolData.main.includes(rootId)) {
+                isMain = true;
+                if (!gs.story.archive.includes(rootId)) {
+                    gs.story.archive.push(rootId);
                     gs.story.mainProgress = (gs.story.mainProgress || 0) + 1;
-                    console.log("📜 主線完成，進度推進至:", gs.story.mainProgress);
+                    console.log("✅ 主線歸檔，進度+1");
+                    
+                    // 確保牌庫乾淨
+                    gs.story.deck = gs.story.deck.filter(id => id !== rootId);
+                    gs.story.discard = gs.story.discard.filter(id => id !== rootId);
                 }
-            } else if (!currentId.startsWith('generated_')) {
-                // 如果是普通卡 (且不是隨機生成的) -> 棄牌 (Discard)
-                gs.story.discard.push(currentId);
+            } 
+            
+            // 如果不是主線，也不是生成卡，就放入棄牌堆
+            if (!isMain && !rootId.startsWith('generated_')) {
+                // 避免重複放入
+                if (!gs.story.discard.includes(rootId)) {
+                    gs.story.discard.push(rootId);
+                }
             }
         }
         
-        // 清除暫存
+        // 清理狀態
         window.TempState.currentSceneData = null;
         window.TempState.currentSceneId = null;
+        window.TempState.rootSceneId = null; // 清除根源
 
-        // [關鍵修復] 必須追加一段文字，並刷新按鈕
         act.save();
         
-        // 延遲一點點，讓玩家感覺到"結束了"
         setTimeout(() => {
             const box = document.getElementById('story-content');
             if(box) {
-                box.innerHTML += '<div style="margin-top:20px; color:#888; text-align:center;">(探索結束)</div>';
+                box.innerHTML += '<div style="margin-top:30px; padding-top:10px; border-top:1px dashed #444; color:#888; text-align:center; font-size:0.9rem;">(探索結束)</div>';
                 document.getElementById('story-text-box').scrollTop = 9999;
             }
-            
-            // 顯示「繼續探索」按鈕
-            view.updateStoryActions([{ 
-                label: '🔍 繼續探索', 
-                onclick: 'act.exploreAdventure()', 
-                style: 'primary' 
-            }]);
-        }, 200);
+            view.updateStoryActions([{ label: '🔍 繼續探索', onclick: 'act.exploreAdventure()', style: 'primary' }]);
+        }, 300);
     },
 
     // Helpers

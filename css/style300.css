@@ -128,18 +128,52 @@ html, body {
 .page.active { display: flex; animation: fadeIn 0.2s; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* 大廳容器特殊設定 */
+/* 1. 確保大廳頁面佔滿 100% 高度，並垂直排列 */
 #page-main {
-    width: 100%;
     height: 100%;
-    position: relative; /* 關鍵：讓絕對定位的子元素以我為準 */
     display: flex;
     flex-direction: column;
-    justify-content: flex-end; /* 讓角色稍微靠下 */
-    align-items: center;       /* 左右置中 */
-    overflow: hidden;          /* 防止跑版 */
-    padding: 0;
-} 
+    justify-content: space-between; /* 上下撐開 */
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* 2. 讓上方按鈕區保持原狀，或稍微往下壓 */
+.quick-area-normal {
+    flex-shrink: 0; /* 不要被壓縮 */
+    margin-bottom: 10px;
+}
+
+/* 3. [關鍵] 讓立繪區域佔據所有剩餘空間 (flex: 1) */
+.char-stage {
+    flex: 1; /* 自動填滿中間區域 */
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* 給個背景色方便除錯，之後可拿掉 */
+    /* background: rgba(255, 255, 255, 0.05); */
+    overflow: hidden;
+}
+
+/* 4. 讓立繪圖片或 Emoji 盡可能變大 */
+.char-stage img {
+    height: 90%; /* 佔據區域的 90% 高度 */
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); /* 加點陰影更有質感 */
+}
+
+/* 如果是 Emoji */
+.char-placeholder {
+    font-size: 10rem; /* Emoji 放大 */
+}
+
+/* 5. 確保底部按鈕 (劇情模式) 固定在最下方 */
+#btn-story-entry {
+    flex-shrink: 0; /* 不要被壓縮 */
+    margin-top: 10px;
+}
 
 #page-story, #page-avatar { padding: 0; overflow: hidden; }
 
@@ -480,21 +514,19 @@ html, body {
 .quick-area-basic { top: 70px; }
 
 .char-stage {
-    flex: 1; 
-    display: flex; align-items: center; justify-content: center;
-    width: 100%;
-    position: relative;
-    /* 點擊穿透問題修正 */
-    pointer-events: auto;
+    height: 250px;  /* 原本可能太高或太矮，試試 250px ~ 400px */
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    margin-bottom: 10px;
 }
 /* 立繪圖片樣式 */
 .main-char-img {
-    height: 85%; /* 根據螢幕高度自動調整 */
-    max-width: 90%;
+    height: 100%;      /* 跟隨父容器高度 */
+    width: auto;       /* 保持比例 */
     object-fit: contain;
-    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.4));
-    cursor: pointer;
-    transition: transform 0.2s;
 }
 .main-char-img:active { transform: scale(0.95); }
 

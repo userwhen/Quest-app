@@ -382,7 +382,8 @@ const ui = {
                 ${charHtml}
             </div>
 
-            ${!isBasic ? `<button class="btn-story-mode" onclick="act.enterStoryMode()">🌀 劇情模式</button>` : ''}
+            
+${!isBasic ? ui.btn.primary('🌀 劇情模式', 'act.enterStoryMode()', 'margin-top:10px;', 'btn-story-entry') : ''}
         `;
     },
     showToast: function(msg) {
