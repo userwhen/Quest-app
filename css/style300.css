@@ -1,8 +1,11 @@
 /* ==========================================================================
-   SelfQuest V15.3 Consolidated CSS (Final Structure)
+   SelfQuest V15.3 + Story V26.1 Consolidated CSS
+   Structure: Variables -> Reset -> Global Layout -> Universal Components -> Pages
    ========================================================================== */
 
-/* --- 1. Config & Variables --- */
+/* --------------------------------------------------------------------------
+   1. Config & Variables (設定與變數)
+   -------------------------------------------------------------------------- */
 :root {
     /* Theme Colors */
     --bg-frame: #1a100c;
@@ -35,20 +38,24 @@
     /* Z-Index Management (嚴格階梯) */
     --z-bg: 0;
     --z-page: 100;
+	--z-story: 1500;      /* 比 Nav 高，但要比 HUD 低 */
     --z-nav: 1000;
     --z-fab: 2000;
-    --z-back-btn: 2100;   /* 全域返回鍵 */
+    --z-hud: 2000;        /* HUD 必須是介面中的最高層 */
+    --z-back-btn: 2100;   
     
     --z-mask: 8000;       /* 通用遮罩 */
     --z-modal: 9000;      /* 通用視窗 */
     
-    --z-sys-mask: 9500;   /* 系統遮罩 (Alert/Confirm) */
+    --z-sys-mask: 9500;   /* 系統遮罩 */
     --z-sys-modal: 9600;  /* 系統視窗 */
     
     --z-toast: 9999;      /* 最高提示 */
 }
 
-/* --- 2. Reset & App Frame --- */
+/* --------------------------------------------------------------------------
+   2. Reset & App Frame (重置與框架)
+   -------------------------------------------------------------------------- */
 * { 
     box-sizing: border-box; 
     -webkit-tap-highlight-color: transparent; 
@@ -75,7 +82,10 @@ html, body {
     box-shadow: 0 0 50px rgba(0,0,0,0.8);
 }
 
-/* --- 3. Layout (HUD, Navbar, Page) --- */
+/* --------------------------------------------------------------------------
+   3. Global Layout (全域佈局)
+   -------------------------------------------------------------------------- */
+/* HUD (Top) */
 #hud {
     flex-shrink: 0;
     height: calc(var(--hud-h) + var(--safe-top));
@@ -84,7 +94,8 @@ html, body {
     border-bottom: 3px solid var(--bg-wood-dark);
     display: flex; justify-content: space-between; align-items: center;
     padding: 0 15px; 
-    z-index: 100;
+    position: relative;    /* 確保 z-index 生效 */
+    z-index: var(--z-hud); /* 👇 [修改] 引用剛剛設定的最高層級 */
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 .hud-left { flex: 1; display: flex; align-items: center; gap: 12px; margin-right: 15px; min-width: 0; }
@@ -93,10 +104,10 @@ html, body {
 .hud-name { font-size: 0.95rem; font-weight: bold; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 .hud-lv-row { display: flex; align-items: center; gap: 8px; width: 100%; }
 .hud-lv-txt { font-size: 0.8rem; color: #ffd54f; font-weight: bold; flex-shrink: 0; }
-/* HUD 內的進度條強制覆寫 */
 .hud-lv-row .u-progress { flex: 1; width: auto !important; height: 12px !important; }
 .res-row { display: flex; align-items: center; gap: 8px; height: 26px; }
 
+/* Navbar (Bottom) */
 #navbar {
     flex-shrink: 0;
     height: calc(var(--nav-h) + var(--safe-bottom));
@@ -116,6 +127,7 @@ html, body {
     transform: translateY(-2px); text-shadow: 0 0 5px rgba(255,215,0,0.5);
 }
 
+/* Page Containers */
 #content-area { flex: 1; position: relative; overflow: hidden; width: 100%; }
 
 .page {
@@ -130,23 +142,22 @@ html, body {
 
 #page-story, #page-avatar { padding: 0; overflow: hidden; }
 
-/* 列表類頁面移除 Padding，交給 scroller 處理 */
+/* List Pages specific overrides */
 #page-task.active, #page-shop.active, #page-stats.active, #page-history.active, #page-milestone.active { 
     overflow: hidden !important; 
     padding: 0 !important; 
 }
 #task-list, #ach-list, #history-list, #milestone-list, #stats-view-container {
-    width: 100%;
-    height: 100%; 
-    display: flex;
-    flex-direction: column;
-    padding: 0; 
-    overflow: hidden; 
+    width: 100%; height: 100%; 
+    display: flex; flex-direction: column;
+    padding: 0; overflow: hidden; 
 }
 
-/* --- 4. Universal Components (u-) --- */
+/* --------------------------------------------------------------------------
+   4. Universal Components (通用元件)
+   -------------------------------------------------------------------------- */
 
-/* Buttons */
+/* --- Atoms: Buttons & Interactives --- */
 .u-btn {
     border: 1px solid #ccc; border-radius: var(--radius-sm);
     padding: 8px 16px; font-weight: bold; cursor: pointer;
@@ -162,28 +173,16 @@ html, body {
 .u-btn-paper { background: #fff; border: 1px solid var(--bg-wood-light); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .u-btn-sm { padding: 4px 10px; font-size: 0.85rem; }
 
-/* [New] 通用圖示方形按鈕 (取代舊的 icon-btn) */
 .u-icon-btn {
     width: 48px; height: 48px; 
-    background: #fff;
-    border: 2px solid var(--bg-wood);
-    border-radius: 12px;
-    font-size: 1.5rem;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 0 var(--bg-wood-dark);
-    cursor: pointer;
-    transition: all 0.1s;
-    color: var(--text-main);
+    background: #fff; border: 2px solid var(--bg-wood); border-radius: 12px;
+    font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 0 var(--bg-wood-dark); cursor: pointer; transition: all 0.1s; color: var(--text-main);
 }
-.u-icon-btn:active {
-    transform: translateY(4px);
-    box-shadow: 0 0 0 var(--bg-wood-dark);
-}
-
+.u-icon-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--bg-wood-dark); }
 .u-btn-icon { width: 30px; height: 30px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: background 0.2s; }
 .u-btn-icon:active { background: rgba(255,255,255,0.2); }
 
-/* 全域返回按鈕 */
 .btn-global-back {
     position: fixed; top: 15px; left: 15px; 
     z-index: var(--z-back-btn);
@@ -194,54 +193,6 @@ html, body {
     backdrop-filter: blur(4px); transition: transform 0.1s;
 }
 .btn-global-back:active { transform: scale(0.95); }
-
-/* Inputs */
-.input-group { margin-bottom: 12px; width: 100%; }
-.section-title { display: block; font-weight: bold; color: var(--text-light); margin-bottom: 6px; font-size: 0.9rem; }
-.inp { width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid #ccc; border-radius: var(--radius-sm); font-size: 1rem; box-sizing: border-box; transition: border 0.2s; }
-.inp:focus { border-color: var(--color-gold); outline: none; background: #fff8e1; }
-.inp-num { text-align: center; font-family: monospace; }
-.box-gray { background-color: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
-
-/* Radio Group */
-.radio-pill-group { display: flex; background: #eee; border-radius: 15px; padding: 2px; }
-.radio-pill-group label { padding: 4px 12px; border-radius: 12px; cursor: pointer; font-size: 0.9rem; color: #666; transition: all 0.2s; }
-.radio-pill-group input:checked + label { background: #fff; color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold; }
-.radio-pill-group input { display: none; }
-
-/* Micro Components */
-.u-avatar { width: 56px; height: 56px; border: 2px solid var(--color-gold); border-radius: 50%; background: #fff; overflow: hidden; box-shadow: 0 0 5px var(--color-gold); display: flex; justify-content: center; align-items: center; font-size: 30px; cursor: pointer; flex-shrink: 0; }
-.u-avatar img { width: 100%; height: 100%; object-fit: cover; }
-
-.u-pill { padding: 2px 10px; border-radius: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); font-size: 0.85rem; display: flex; align-items: center; gap: 5px; color: #fff; font-weight: bold; white-space: nowrap; }
-.u-pill.blue { border-color: #4fc3f7; color: #b3e5fc; }
-.u-pill.purple { border-color: #ba68c8; color: #e1bee7; }
-.u-pill.gold { border-color: #ffb74d; color: #ffe0b2; }
-
-.u-progress { position: relative; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; }
-.u-progress-fill { height: 100%; background: linear-gradient(90deg, #66bb6a, #a5d6a7); width: 0%; transition: width 0.3s ease; }
-.u-progress-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); white-space: nowrap; line-height: 1; }
-
-/* Tabs (Sliding & ScrollX) */
-.sliding-tabs-container { background: #eee; padding: 4px; border-radius: 25px; margin: 10px 5px; width: calc(100% - 10px); max-width: 100%; overflow: hidden; flex-shrink: 0; }
-.sliding-tabs { position: relative; display: flex; height: 40px; background: #ddd; border-radius: 20px; overflow: hidden; }
-.sliding-pill { position: absolute; width: 50%; height: 100%; background: #fff; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-.sliding-tab-btn { flex: 1; background: transparent; border: none; z-index: 2; font-weight: bold; color: #666; cursor: pointer; }
-.sliding-tab-btn.active { color: #000; }
-
-.filter-container { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 0 5px; width: 100%; overflow: hidden; }
-.u-scroll-x { display: flex; flex: 1; min-width: 0; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; gap: 8px; background: #eee; padding: 4px 6px; border-radius: 20px; -webkit-overflow-scrolling: touch; }
-.u-scroll-y {
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    padding: 15px; /* 在這裡補回內容的留白 */
-    padding-bottom: 100px; /* 避開底部導航 */
-}
-.u-tag { flex-shrink: 0; white-space: nowrap; padding: 6px 14px; background: #fff; border: 1px solid #ccc; border-radius: 16px; color: var(--text-light); font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
-.u-tag.active { background: var(--bg-wood); color: #fff; border-color: var(--bg-wood-dark); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-.filter-action-btn { flex-shrink: 0; }
-.btn-add-tag { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: 1px dashed #ccc; background: #fff; color: #888; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; }
 
 /* FAB */
 #global-fab, .fab {
@@ -257,100 +208,98 @@ html, body {
 .fab:active { transform: scale(0.95); }
 #global-fab.fab-gold { background: linear-gradient(135deg, #ffb300, #ffca28) !important; border-color: #ffd54f !important; box-shadow: 0 0 15px rgba(255, 179, 0, 0.6) !important; color: #3e2723 !important; }
 
-/* [New] NPC Stage Component (左圖右文) */
-.npc-stage-container {
-    display: flex;
-    align-items: flex-end; /* 底部對齊 */
-    padding: 15px;
-    background-size: cover;
-    background-position: center;
-    border-bottom: 2px solid var(--bg-wood-dark);
-    position: relative;
-    min-height: 120px;
-}
-.npc-avatar-box {
-    width: 70px;
-    height: 70px;
-    margin-right: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 3rem; /* Emoji 大小 */
-    filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
-    flex-shrink: 0;
-}
-.npc-avatar-box img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-.npc-dialogue-box {
-    flex: 1; /* 自適應寬度 */
-    position: relative;
-    background: #fff;
-    border: 2px solid var(--bg-wood);
-    border-radius: 12px;
-    padding: 10px 14px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    min-height: 50px;
-    display: flex;
-    align-items: center;
-}
-/* 對話框小尖角 */
-.npc-dialogue-box::before {
-    content: '';
-    position: absolute;
-    left: -10px;
-    bottom: 15px;
-    border-width: 10px 10px 10px 0;
-    border-style: solid;
-    border-color: transparent var(--bg-wood) transparent transparent;
-}
-.npc-dialogue-box::after {
-    content: '';
-    position: absolute;
-    left: -7px;
-    bottom: 15px;
-    border-width: 10px 10px 10px 0;
-    border-style: solid;
-    border-color: transparent #fff transparent transparent;
-}
-.npc-text {
-    color: var(--text-main);
-    font-weight: bold;
-    font-size: 0.95rem;
-    line-height: 1.4;
-}
+/* --- Atoms: Inputs & Pills --- */
+.input-group { margin-bottom: 12px; width: 100%; }
+.section-title { display: block; font-weight: bold; color: var(--text-light); margin-bottom: 6px; font-size: 0.9rem; }
+.inp { width: 100%; padding: 10px; background: var(--bg-input); border: 1px solid #ccc; border-radius: var(--radius-sm); font-size: 1rem; box-sizing: border-box; transition: border 0.2s; }
+.inp:focus { border-color: var(--color-gold); outline: none; background: #fff8e1; }
+.inp-num { text-align: center; font-family: monospace; }
+.box-gray { background-color: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
 
-/* [New] Item Card (商品/物品卡片) */
+.radio-pill-group { display: flex; background: #eee; border-radius: 15px; padding: 2px; }
+.radio-pill-group label { padding: 4px 12px; border-radius: 12px; cursor: pointer; font-size: 0.9rem; color: #666; transition: all 0.2s; }
+.radio-pill-group input:checked + label { background: #fff; color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold; }
+.radio-pill-group input { display: none; }
+
+.u-avatar { width: 56px; height: 56px; border: 2px solid var(--color-gold); border-radius: 50%; background: #fff; overflow: hidden; box-shadow: 0 0 5px var(--color-gold); display: flex; justify-content: center; align-items: center; font-size: 30px; cursor: pointer; flex-shrink: 0; }
+.u-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.u-pill { padding: 2px 10px; border-radius: 12px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); font-size: 0.85rem; display: flex; align-items: center; gap: 5px; color: #fff; font-weight: bold; white-space: nowrap; }
+.u-pill.blue { border-color: #4fc3f7; color: #b3e5fc; }
+.u-pill.purple { border-color: #ba68c8; color: #e1bee7; }
+.u-pill.gold { border-color: #ffb74d; color: #ffe0b2; }
+
+/* [New] Tag Pill (用於劇情模式與過濾器) */
+.u-tag-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 6px 10px; border-radius: 20px;
+    font-size: 0.9rem; font-weight: bold; color: #fff;
+    background: rgba(30, 30, 30, 1); border: 1px solid #555;
+    white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.u-tag-pill.status { border-color: #ff4444; color: #ffcccc; background: #330000; }
+.u-tag-pill.item { border-color: #ffd700; color: #ffeb3b; background: #332200; }
+.u-tag-pill.social { border-color: #44aaff; color: #cceeff; background: #001133; }
+
+.u-progress { position: relative; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; overflow: hidden; }
+.u-progress-fill { height: 100%; background: linear-gradient(90deg, #66bb6a, #a5d6a7); width: 0%; transition: width 0.3s ease; }
+.u-progress-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); white-space: nowrap; line-height: 1; }
+
+.chk { width: 24px; height: 24px; border: 2px solid #aaa; border-radius: 50%; flex-shrink: 0; position: relative; cursor: pointer; background: #fff; transition: all 0.2s; }
+.chk.visually-checked { background: var(--color-success); border-color: var(--color-success); }
+.chk.visually-checked::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 14px; font-weight: bold; }
+.chk.locked { border-color: #e0e0e0; background: #f5f5f5; cursor: not-allowed; }
+
+/* --- Molecules: Containers & Lists --- */
+.sliding-tabs-container { background: #eee; padding: 4px; border-radius: 25px; margin: 10px 5px; width: calc(100% - 10px); max-width: 100%; overflow: hidden; flex-shrink: 0; }
+.sliding-tabs { position: relative; display: flex; height: 40px; background: #ddd; border-radius: 20px; overflow: hidden; }
+.sliding-pill { position: absolute; width: 50%; height: 100%; background: #fff; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.sliding-tab-btn { flex: 1; background: transparent; border: none; z-index: 2; font-weight: bold; color: #666; cursor: pointer; }
+.sliding-tab-btn.active { color: #000; }
+
+.filter-container { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 0 5px; width: 100%; overflow: hidden; }
+.u-scroll-x { display: flex; flex: 1; min-width: 0; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; gap: 8px; background: #eee; padding: 4px 6px; border-radius: 20px; -webkit-overflow-scrolling: touch; }
+.u-scroll-y { overflow-y: auto !important; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 15px; padding-bottom: 100px; }
+.u-tag { flex-shrink: 0; white-space: nowrap; padding: 6px 14px; background: #fff; border: 1px solid #ccc; border-radius: 16px; color: var(--text-light); font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+.u-tag.active { background: var(--bg-wood); color: #fff; border-color: var(--bg-wood-dark); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+.filter-action-btn { flex-shrink: 0; }
+.btn-add-tag { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: 1px dashed #ccc; background: #fff; color: #888; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; }
+
+/* --- Organisms: Cards & Stages --- */
+/* NPC Stage Component */
+.npc-stage-container {
+    display: flex; align-items: flex-end; padding: 15px;
+    background-size: cover; background-position: center;
+    border-bottom: 2px solid var(--bg-wood-dark);
+    position: relative; min-height: 120px;
+}
+.npc-avatar-box { width: 70px; height: 70px; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-size: 3rem; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3)); flex-shrink: 0; }
+.npc-avatar-box img { width: 100%; height: 100%; object-fit: contain; }
+.npc-dialogue-box {
+    flex: 1; position: relative; background: #fff;
+    border: 2px solid var(--bg-wood); border-radius: 12px;
+    padding: 10px 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    min-height: 50px; display: flex; align-items: center;
+}
+.npc-dialogue-box::before { content: ''; position: absolute; left: -10px; bottom: 15px; border-width: 10px 10px 10px 0; border-style: solid; border-color: transparent var(--bg-wood) transparent transparent; }
+.npc-dialogue-box::after { content: ''; position: absolute; left: -7px; bottom: 15px; border-width: 10px 10px 10px 0; border-style: solid; border-color: transparent #fff transparent transparent; }
+.npc-text { color: var(--text-main); font-weight: bold; font-size: 0.95rem; line-height: 1.4; }
+
+/* Item Card */
 .item-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    cursor: pointer;
-    transition: transform 0.1s;
-    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+    background: #fff; border: 1px solid #ccc; border-radius: 8px;
+    padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    cursor: pointer; transition: transform 0.1s; position: relative;
 }
 .item-card:active { transform: scale(0.96); border-color: var(--color-gold); }
 .item-icon { font-size: 2rem; margin-bottom: 5px; }
 .item-name { font-weight: bold; font-size: 0.9rem; margin-bottom: 4px; text-align: center; line-height: 1.2; height: 1.2em; overflow: hidden; }
 .item-meta { font-size: 0.8rem; color: #666; display: flex; align-items: center; gap: 4px; }
 .item-badge { position: absolute; top: 5px; right: 5px; background: #d32f2f; color: #fff; font-size: 0.7rem; padding: 2px 6px; border-radius: 8px; }
-/* Grid 排版容器 */
-.shop-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 10px;
-    padding: 15px;
-    width: 100%;
-}
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; padding: 15px; width: 100%; }
 
-/* --- 5. Standard Card System (.std-card) --- */
+/* Standard Card System */
 .std-card {
     display: grid; grid-template-columns: 40px 1fr auto; gap: 8px;
     background: #fff; border-radius: 12px; padding: 12px 15px; margin-bottom: 12px;
@@ -383,11 +332,6 @@ html, body {
 .btn-ghost-edit { background: transparent; border: none; padding: 0 5px; color: #ccc; font-size: 1.3rem; cursor: pointer; line-height: 1; flex-shrink: 0; }
 .btn-ghost-edit:active { color: var(--color-gold); }
 
-.chk { width: 24px; height: 24px; border: 2px solid #aaa; border-radius: 50%; flex-shrink: 0; position: relative; cursor: pointer; background: #fff; transition: all 0.2s; }
-.chk.visually-checked { background: var(--color-success); border-color: var(--color-success); }
-.chk.visually-checked::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 14px; font-weight: bold; }
-.chk.locked { border-color: #e0e0e0; background: #f5f5f5; cursor: not-allowed; }
-
 .card-expand-content { grid-column: 1 / -1; border-top: 1px dashed #eee; padding-top: 10px; margin-top: 5px; display: none; }
 .card-expand-content.show { display: block; }
 .subtask-row { display: flex; align-items: center; gap: 10px; padding: 12px 8px; border-bottom: 1px dashed #eee; cursor: pointer; }
@@ -396,11 +340,9 @@ html, body {
 .expand-desc { flex: 1; font-size: 0.9rem; color: #555; line-height: 1.4; word-break: break-word; }
 .expand-date-badge { flex-shrink: 0; font-size: 0.75rem; color: #888; background: #f0f0f0; padding: 2px 8px; border-radius: 10px; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
 
-/* --- 6. Modals & Toast --- */
+/* Modals */
 .mask { position: absolute !important; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: var(--z-mask); display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 .mask.active { display: flex !important; }
-
-/* [修正] 系統彈窗的 Z-Index */
 #m-system { z-index: var(--z-sys-mask) !important; }
 #m-system .modal { z-index: var(--z-sys-modal) !important; border-color: var(--color-danger); }
 
@@ -415,9 +357,38 @@ html, body {
 .u-toast { position: absolute !important; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: var(--z-toast); background: rgba(0,0,0,0.85); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; pointer-events: none; white-space: nowrap; border: 1px solid var(--color-gold); opacity: 0; transition: opacity 0.3s; }
 .u-toast.show { opacity: 1; }
 
-/* --- 7. Specific Views --- */
+/* --------------------------------------------------------------------------
+   5. Page Specific Styles (各頁面專屬)
+   -------------------------------------------------------------------------- */
 
-/* [View: Stats & Calorie] */
+/* --- [Page: Main] --- */
+#page-main {
+    height: 100%;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 20px; box-sizing: border-box;
+}
+.quick-area-normal, .quick-area-basic {
+    position: absolute; right: 15px;
+    display: flex; flex-direction: column; gap: 10px;
+    z-index: 50;
+}
+.quick-area-normal { top: 15px; margin-bottom: 10px; flex-shrink: 0; }
+.quick-area-basic { top: 70px; }
+
+.char-stage {
+    flex: 1; width: 100%;
+    display: flex; justify-content: center; align-items: center;
+    overflow: hidden;
+}
+.char-stage img, .main-char-img {
+    height: 90%; width: auto; object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+.char-stage img:active { transform: scale(0.95); }
+.char-placeholder { font-size: 10rem; }
+#btn-story-entry { flex-shrink: 0; margin-top: 10px; }
+
+/* --- [Page: Stats & Calorie] --- */
 .stats-header-area { background: transparent; padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.1); position: relative; }
 .dynamic-display-box { height: 260px; width: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
 .stats-chart-container { background: transparent !important; box-shadow: none !important; margin: 0 auto; padding: 0; height: 100%; width: 100%; display: flex; justify-content: center; align-items: center; }
@@ -427,16 +398,13 @@ html, body {
 .section-header h3 { margin: 0; font-size: 1rem; color: #5d4037; font-weight: bold; border-left: 4px solid var(--color-gold); padding-left: 8px; }
 .skill-list-area { padding: 0 10px 80px 10px; display: flex; flex-direction: column; gap: 8px; }
 
-/* Attributes (Minimal Style) */
 .attr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 10px; padding: 20px 10px; }
 .attr-minimal { background: transparent; border: none; padding: 0 5px; display: flex; flex-direction: column; gap: 4px; }
 .attr-top-row { display: flex; justify-content: space-between; align-items: flex-end; font-size: 0.9rem; font-weight: bold; color: var(--text-main); border-bottom: 2px solid rgba(62, 39, 35, 0.1); padding-bottom: 2px; }
 .attr-lv { font-size: 0.8rem; color: var(--color-gold); }
 
-/* Skill Mini Card */
 .skill-card-mini { background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 8px; padding: 10px 20px 80px 20px; display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 10px; }
 
-/* Ledger Style */
 .cal-dashboard-display { text-align: center; width: 100%; animation: fadeIn 0.3s; }
 .cal-hero-num { font-size: 3rem; font-weight: bold; color: #e65100; line-height: 1.2; text-shadow: 0 2px 0 rgba(255,255,255,0.5); }
 .cal-sub-info { font-size: 1rem; color: #795548; background: rgba(255,255,255,0.5); display: inline-block; padding: 4px 12px; border-radius: 12px; margin-top: 5px; }
@@ -450,196 +418,166 @@ html, body {
 .val-pos { color: #2e7d32; font-weight: bold; }
 .val-neg { color: #c62828; font-weight: bold; }
 
-/* [View: Milestone] */
+/* --- [Page: Milestone] --- */
 .wood-board { background: #5d4037; border: 4px solid #3e2723; border-radius: 8px; padding: 15px; margin: 10px; box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3); position: relative; text-align: center; }
 .board-title { color: #ffb74d; font-weight: bold; font-size: 1.1rem; margin-bottom: 10px; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 5px; display: inline-block; }
 .master-badge-container { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; min-height: 60px; }
 .master-badge { width: 48px; height: 48px; background: #fff8e1; border: 2px solid #ffb300; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
 
-/* [View: Main & Quick] */
-/* [Fix] 配合 HTML 新結構的 Quick Icons 定位 */
-.quick-area-normal, .quick-area-basic {
-    position: absolute; right: 15px;
-    display: flex; flex-direction: column; gap: 10px;
-    z-index: 50;
-}
-.quick-area-normal { top: 15px; }
-.quick-area-basic { top: 70px; }
-
-.char-stage {
-    height: 250px;  /* 原本可能太高或太矮，試試 250px ~ 400px */
-    
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    margin-bottom: 10px;
-}
-/* 立繪圖片樣式 */
-.main-char-img {
-    height: 100%;      /* 跟隨父容器高度 */
-    width: auto;       /* 保持比例 */
-    object-fit: contain;
-}
-.main-char-img:active { transform: scale(0.95); }
-
-/* 1. 確保大廳頁面佔滿 100% 高度，並垂直排列 */
-#page-main {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; /* 上下撐開 */
-    padding: 20px;
-    box-sizing: border-box;
-}
-
-/* 2. 讓上方按鈕區保持原狀，或稍微往下壓 */
-.quick-area-normal {
-    flex-shrink: 0; /* 不要被壓縮 */
-    margin-bottom: 10px;
-}
-
-/* 3. [關鍵] 讓立繪區域佔據所有剩餘空間 (flex: 1) */
-.char-stage {
-    flex: 1; /* 自動填滿中間區域 */
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    /* 給個背景色方便除錯，之後可拿掉 */
-    /* background: rgba(255, 255, 255, 0.05); */
-    overflow: hidden;
-}
-
-/* 4. 讓立繪圖片或 Emoji 盡可能變大 */
-.char-stage img {
-    height: 90%; /* 佔據區域的 90% 高度 */
-    width: auto;
-    object-fit: contain;
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); /* 加點陰影更有質感 */
-}
-
-/* 如果是 Emoji */
-.char-placeholder {
-    font-size: 10rem; /* Emoji 放大 */
-}
-
-/* 5. 確保底部按鈕 (劇情模式) 固定在最下方 */
-#btn-story-entry {
-    flex-shrink: 0; /* 不要被壓縮 */
-    margin-top: 10px;
-}
-
-/* Story & Avatar Specifics */
-.story-top-bar { display: flex; align-items: center; padding: 10px; background: rgba(0,0,0,0.5); color: #fff; z-index: 10; position: relative; }
+/* --- [Page: Avatar] --- */
 .avatar-bottom-panel { position: absolute; bottom: 0; width: 100%; height: 260px; background: #deb887; border-top: 4px solid var(--bg-wood); display: flex; flex-direction: column; z-index: 50; }
 .avatar-controls { display: none; position: absolute; bottom: 15px; right: 15px; gap: 10px; z-index: 100; }
 #page-avatar.active .avatar-controls { display: flex; }
 
-/* --- Story Mode V2 Layout --- */
-
-/* 1. 頁面容器：垂直 Flex，填滿螢幕 */
-.story-page-layout {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    background: #222; /* 深色背景預設 */
-    color: #fff;
-    position: relative;
-}
-
-/* 2. 頂部資訊列 (Top Bar) */
-.story-top-bar {
-    flex-shrink: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 15px;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(5px);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    z-index: 10;
-}
-
-.story-res-grp {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-    color: #ffd700; /* 金色/黃色 */
-}
-
-/* 3. 對話框區 (上半部，佔據剩餘空間的 40%~50%) */
-.story-text-area {
-    flex: 1; /* 會伸縮 */
-    min-height: 200px;
-    padding: 20px;
-    background: rgba(0,0,0,0.3);
-    overflow-y: auto;
-    font-size: 1rem;
-    line-height: 1.6;
-    text-shadow: 1px 1px 2px black;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start; /* 文字從上往下 */
-}
-
-/* 下頁箭頭 (Caret) */
-.story-caret {
-    align-self: flex-end;
-    margin-top: auto; /* 推到底部 */
-    animation: bounce 1s infinite;
-    font-size: 1.2rem;
-    color: #ccc;
-}
-
-/* 4. 立繪區 (下半部，固定高度或比例) */
-.story-stage-area {
-    flex: 1; /* 與對話區平分，或根據內容調整 */
-    position: relative;
-    background-size: cover;
-    background-position: center;
+/* --- [Page: Story V26.1] --- */
+/* Layout Containers */
+#page-story {
+    /* 👇 [修改] 從 fixed 改為 absolute，這樣它才會乖乖待在 #app-frame 裡面 */
+    position: absolute !important;     
+    /* 底部貼齊，蓋住原本的 Navbar */
+    bottom: 0; 
+    
+    left: 0; 
+    width: 100%; /* 不用 100vw，改用 100% 跟隨父容器 */
+    
+    background-color: #000;
+    z-index: var(--z-story); /* 👇 [修改] 使用 1500，蓋過 Navbar */
+    display: none;
     overflow: hidden;
-    border-top: 1px solid rgba(255,255,255,0.1);
+}
+#story-bg-layer {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-size: cover; background-position: center;
+    z-index: 1;
 }
 
-.story-char-img {
+ruby {
+    display: inline-flex;
+    flex-direction: column-reverse;
+    vertical-align: bottom;
+    align-items: center;
+}
+rt {
+    display: block;
+    font-size: 0.5em; /* 拼音字體大小 */
+    line-height: 1;
+    text-align: center;
+    color: #ffd700;   /* 金色拼音，比較明顯 */
+    margin-bottom: -2px; /* 拉近與漢字的距離 */
+}
+
+/* Components */
+.story-top-bar { display: flex; align-items: center; padding: 10px; background: rgba(0,0,0,0.5); color: #fff; z-index: 10; position: relative; }
+.story-res-grp { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #ffd700; }
+
+#story-location-display {
     position: absolute;
-    bottom: 0;
-    height: 90%; /* 立繪高度 */
-    width: auto;
-    filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
-    transition: transform 0.3s, filter 0.3s;
-}
-.char-left { left: 5%; }
-.char-right { right: 5%; }
-
-/* 5. 底部行動區 (Action Area) */
-.story-action-area {
-    flex-shrink: 0;
-    padding: 15px;
-    background: rgba(0,0,0,0.8);
-    display: grid; /* 關鍵：使用 Grid */
-    gap: 10px; /* 按鈕間距 */
-    /* grid-template-columns 會由 JS 動態設定 */
-}
-
-/* --- 2D 動畫特效 --- */
-
-/* 數字滾動框 */
-.d20-box-2d {
-    display: inline-block;
-    padding: 5px 10px;
-    border: 2px solid #fff;
-    border-radius: 8px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%); /* 完美的絕對置中 */
     font-weight: bold;
-    font-family: monospace;
-    font-size: 1.2rem;
-    background: rgba(0,0,0,0.5);
-    margin-right: 8px;
+    color: #fff;
+    font-size: 1.1rem;
+    text-shadow: 0 1px 3px #000;
+    pointer-events: none; /* 防止擋到點擊 */
+	white-space: nowrap; /* 防止地點名稱換行 */
 }
 
-/* 震動動畫 (Shake) */
+#story-text-box {
+    position: relative; z-index: 2;
+    flex: 1; margin: 0; padding: 20px 25px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #eee; font-size: 1.2rem; line-height: 1.6;
+    text-shadow: 1px 1px 2px #000;
+    overflow-y: auto;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.story-caret { align-self: flex-end; margin-top: auto; animation: bounce 1s infinite; font-size: 1.2rem; color: #ccc; }
+
+#story-actions {
+    position: relative; z-index: 2;
+    height: 200px; flex-shrink: 0;
+    padding: 15px 20px;
+    background: rgba(20, 20, 20, 0.95);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: grid; gap: 10px; align-content: stretch;
+}
+
+/* Tag Drawer System */
+#tag-drawer-unit {
+    position: absolute; bottom: 0; right: 0;
+    width: 100%; height: 200px; z-index: 20;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    pointer-events: none;
+}
+#tag-drawer-unit.open { transform: translateX(0%); }
+
+#tag-drawer-handle, #tag-drawer-close {
+    position: absolute;
+    top: -40px;
+    
+    /* 尺寸 */
+    width: 50px; 
+    height: 40px;
+    
+    /* 外觀：統一灰色風格 */
+    background: #222; 
+    color: #fff;
+    border: 1px solid #555;
+    
+    /* 關鍵：圓角設定 (圓角在左上，因為它們都靠在右牆) */
+    border-radius: 8px 0 0 0; 
+    
+    /* 去掉右邊和下邊的邊框，讓它看起來像附著在牆上/面板上 */
+    border-bottom: none; 
+    border-right: none; 
+    
+    /* 內容對齊 */
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; 
+    
+    /* 互動 */
+    cursor: pointer; 
+    pointer-events: auto !important;
+    z-index: 30;
+}
+
+/* 2. 把手 (Handle) - 綁在抽屜的最左邊 */
+/* 關閉時：它露在螢幕右側。開啟時：它滑出螢幕左側。 */
+#tag-drawer-handle {
+    left: -50px;
+    /* 確保這時候不需要 close 按鈕佔位 */
+    display: flex;
+}
+
+/* 3. 收回鈕 (Close) - 綁在抽屜的最右邊 */
+/* 關閉時：它在螢幕右側外。開啟時：它剛好滑進螢幕右側 (原位)。 */
+#tag-drawer-close {
+    right: 0;
+    /* 確保這時候不需要 handle 按鈕佔位 */
+    display: flex;
+}
+
+#tag-drawer-body {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #111; pointer-events: auto;
+    padding: 15px; overflow-y: auto;
+	/* 不要的話修改這裡：改成 none 或直接刪除這一行 */
+    border-top: 2px solid #ffd700;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    grid-auto-rows: max-content; gap: 10px;
+	/* 修改這裡：改成 border，並設定寬度與顏色 */
+    border: 2px solid #ffd700;
+    /* 建議：因為有邊框了，可以稍微加個 box-sizing 確保不跑版 (雖全域有設，但確保一下無妨) */
+    box-sizing: border-box;
+}
+
+/* Story Animations */
+.d20-box-2d { display: inline-block; padding: 5px 10px; border: 2px solid #fff; border-radius: 8px; font-weight: bold; font-family: monospace; font-size: 1.2rem; background: rgba(0,0,0,0.5); margin-right: 8px; }
+
 @keyframes shake {
     0% { transform: translate(1px, 1px) rotate(0deg); }
     10% { transform: translate(-1px, -2px) rotate(-1deg); }
@@ -653,17 +591,9 @@ html, body {
     90% { transform: translate(1px, 2px) rotate(0deg); }
     100% { transform: translate(1px, -2px) rotate(-1deg); }
 }
+.anim-shake { animation: shake 0.5s; animation-iteration-count: infinite; color: #ffeb3b; border-color: #ffeb3b; }
 
-.anim-shake {
-    animation: shake 0.5s;
-    animation-iteration-count: infinite;
-    color: #ffeb3b; /* 震動時黃色 */
-    border-color: #ffeb3b;
-}
-
-.anim-pop {
-    animation: pop 0.3s ease-out;
-}
+.anim-pop { animation: pop 0.3s ease-out; }
 @keyframes pop {
     0% { transform: scale(1); }
     50% { transform: scale(1.3); }
