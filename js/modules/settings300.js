@@ -1,227 +1,385 @@
-/* js/modules/settings300.js - V28.1 UI: Integrated Shop & Learning */
-
 const SettingsEngine = {
-    // 儲存設定
+    // 定義商店內販售的模式商品
+    shopItems: [
+        {
+            id: 'harem',
+            name: '💕 后宮模式',
+            desc: '沈浸式體驗，專注於角色互動與好感度培養。<br>享受更多親密劇情與特殊事件。',
+            price: 50,
+            currencyType: 'free', // 免費鑽 (儲值鑽可補)
+            color: '#e91e63',
+            bg: '#fce4ec',
+            border: '#f48fb1',
+            badge: 'NEW'
+        },
+        {
+            id: 'learning',
+            name: '📚 語言學習模組',
+            desc: '解鎖日、韓、英、法、西多語言劇情。<br>開啟獨家 <b>[MIX] 混沌模式</b>。',
+            price: 100,
+            currencyType: 'paid', // 僅限儲值鑽
+            color: '#f57f17',
+            bg: '#fff8e1',
+            border: '#ffb300',
+            badge: 'HOT'
+        }
+    ],
+
+    // 1. 儲存設定 (包含模式互斥邏輯)
     save: () => {
-        const mode = document.getElementById('set-mode').value;
-        const calMode = document.getElementById('set-cal-mode').checked;
-        const strictMode = document.getElementById('set-strict-mode').checked;
+        const modeEl = document.getElementById('set-mode');
+        const calEl = document.getElementById('set-cal-mode');
+        const strictEl = document.getElementById('set-strict-mode');
         
-        // 獲取學習模式開關 (如果元素存在)
-        const learningEl = document.getElementById('set-learning-mode');
-        const learningMode = learningEl ? learningEl.checked : (window.GlobalState.settings?.learningMode || false);
-
+        const mode = modeEl ? modeEl.value : 'adventurer';
+        const calMode = calEl ? calEl.checked : false;
+        const strictMode = strictEl ? strictEl.checked : false;
+        
         if (!window.GlobalState.settings) window.GlobalState.settings = {};
-        window.GlobalState.settings.mode = mode;
-        window.GlobalState.settings.calMode = calMode;
-        window.GlobalState.settings.strictMode = strictMode;
-        window.GlobalState.settings.learningMode = learningMode;
+        const s = window.GlobalState.settings;
 
-        // 開啟學習模式若無語言，預設 MIX
-        if (learningMode && !window.GlobalState.settings.targetLang) {
-            window.GlobalState.settings.targetLang = 'mix';
+        s.mode = mode;
+        s.calMode = calMode;
+        s.strictMode = strictMode;
+        
+        // [修改] 模式互斥邏輯：只有當前模式為 'learning' 時，learningMode 才為 true
+        if (mode === 'learning') {
+            s.learningMode = true;
+            if (!s.targetLang) s.targetLang = 'mix';
+        } else {
+            s.learningMode = false; // 切換到其他模式，強制關閉學習功能
         }
 
         act.save();
         act.toast("✅ 設定已儲存");
-        act.closeModal('panel');
+        act.closeModal('m-panel');
 
-        // 刷新劇情頁 TopBar
+        // 刷新頁面
         if (document.getElementById('page-story') && document.getElementById('page-story').style.display === 'block') {
              if(window.view && window.view.renderStoryPage) window.view.renderStoryPage();
         }
-
         if (mode === 'basic') act.navigate('stats');
         else act.navigate('main');
-        
         if (view.render) view.render();
     },
 
-    // 購買學習模式
-    buyLearningMode: () => {
+    // 2. 購買功能 (雙貨幣邏輯)
+    buyItem: (itemId) => {
         const gs = window.GlobalState;
-        if ((gs.gems || 0) < 100) {
-            act.toast("❌ 鑽石不足 (需要 100)");
-            return;
+        const item = SettingsEngine.shopItems.find(i => i.id === itemId);
+        if (!item) return;
+
+        // 確保數值安全
+        const freeGem = gs.freeGem || 0;     // 💎 免費鑽
+        const paidGem = gs.paidGem || 0;     // 💠 儲值鑽
+
+        // --- 邏輯 A: 儲值鑽限定 ---
+        if (item.currencyType === 'paid') {
+            if (paidGem < item.price) {
+                act.toast(`❌ 儲值鑽不足 (需要 ${item.price} 💠)`);
+                return;
+            }
+            gs.paidGem -= item.price;
+        } 
+        // --- 邏輯 B: 免費鑽 (儲值鑽可補) ---
+        else {
+            const totalAssets = freeGem + paidGem;
+            if (totalAssets < item.price) {
+                act.toast(`❌ 鑽石總額不足 (需要 ${item.price} 💎)`);
+                return;
+            }
+            // 扣款順序：先扣免費，不夠的扣儲值
+            let cost = item.price;
+            if (freeGem >= cost) {
+                gs.freeGem -= cost;
+            } else {
+                cost -= freeGem; // 扣光免費鑽後的剩餘款項
+                gs.freeGem = 0;
+                gs.paidGem -= cost;
+            }
         }
         
-        gs.gems -= 100;
+        // 解鎖與自動切換
         if (!gs.unlocks) gs.unlocks = {};
-        gs.unlocks.learningMode = true;
+        gs.unlocks[itemId] = true;
         
-        // 自動開啟並設定 MIX
-        if (!gs.settings) gs.settings = {};
-        gs.settings.learningMode = true;
-        gs.settings.targetLang = 'mix';
+        // 購買後直接切換到該模式
+        gs.settings.mode = itemId;
+        if (itemId === 'learning') {
+            gs.settings.learningMode = true;
+            gs.settings.targetLang = 'mix';
+        } else {
+            gs.settings.learningMode = false;
+        }
 
         act.save();
-        act.toast("🎉 購買成功！學習模式已解鎖");
+        act.toast(`🎉 購買成功！已解鎖 ${item.name}`);
         
-        // 關閉商店並重繪設定頁
-        const shop = document.getElementById('modal-shop');
-        if(shop) shop.remove();
-        view.renderSettings(); 
+        // 刷新商店 (停留在當前卡片)
+        SettingsEngine.openShopModal(SettingsEngine.shopItems.findIndex(i => i.id === itemId));
+        // 刷新設定頁 (更新下拉選單)
+        view.renderSettings();
     },
 
-    // 測試領鑽
-    addTestGems: () => {
+    // 3. 開啟商店 (輪播介面)
+    openShopModal: (index = 0) => {
         const gs = window.GlobalState;
-        gs.gems = (gs.gems || 0) + 100;
-        act.save();
-        const el = document.getElementById('shop-gems');
-        if(el) el.innerText = gs.gems;
-        act.toast("🎁 +100 鑽石");
-    },
-    
-    // ... (保留 resetData, exportData, importData, checkCal 邏輯)
-    resetData: () => {
-        act.confirm("⚠️ 確定要重置所有資料嗎？(不可復原)", (yes) => {
-            if (yes) {
-                window.isResetting = true;
-                localStorage.clear();
-                location.reload();
+        const items = SettingsEngine.shopItems;
+        
+        // 索引循環
+        if (index < 0) index = items.length - 1;
+        if (index >= items.length) index = 0;
+
+        const currentItem = items[index];
+        const isUnlocked = gs.unlocks && gs.unlocks[currentItem.id];
+
+        // 導航按鈕
+        const prevBtn = items.length > 1 ? `<button onclick="SettingsEngine.openShopModal(${index - 1})" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#888; padding:0 10px;">◀</button>` : '';
+        const nextBtn = items.length > 1 ? `<button onclick="SettingsEngine.openShopModal(${index + 1})" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#888; padding:0 10px;">▶</button>` : '';
+
+        // 價格顯示字串
+        let priceDisplay = '';
+        if (isUnlocked) {
+            priceDisplay = '✅ 已擁有';
+        } else {
+            priceDisplay = currentItem.currencyType === 'paid' ? 
+                `💠 ${currentItem.price}` : `💎 ${currentItem.price}`;
+        }
+
+        // 卡片 HTML
+        const cardHtml = `
+            <div style="flex:1; border:2px solid ${currentItem.border}; border-radius:10px; padding:15px; background:${currentItem.bg}; text-align:left; position:relative; min-height:160px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h3 style="margin:0; color:${currentItem.color}; font-size:1.1rem;">${currentItem.name}</h3>
+                        ${currentItem.badge ? `<span style="background:${currentItem.border}; color:#000; padding:2px 8px; border-radius:4px; font-size:0.8rem; font-weight:bold;">${currentItem.badge}</span>` : ''}
+                    </div>
+                    <p style="font-size:0.9rem; color:#555; margin-bottom:15px; line-height:1.6;">
+                        ${currentItem.desc}
+                    </p>
+                </div>
+                <div style="font-size:1.4rem; font-weight:bold; color:${currentItem.color}; text-align:right;">
+                    ${priceDisplay}
+                </div>
+            </div>
+        `;
+
+        const bodyHtml = `
+            <div style="text-align:center; padding:5px;">
+                <div style="font-size:0.9rem; font-weight:bold; margin-bottom:15px; color:#333; display:flex; justify-content:center; gap:15px;">
+                    <span>💎 免費: <span style="color:#0288d1;">${gs.freeGem||0}</span></span>
+                    <span>💠 儲值: <span style="color:#9c27b0;">${gs.paidGem||0}</span></span>
+                </div>
+                
+                <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
+                    ${prevBtn}
+                    ${cardHtml}
+                    ${nextBtn}
+                </div>
+                
+                <div style="margin-top:10px; font-size:0.8rem; color:#999;">
+                    (${index + 1} / ${items.length})
+                </div>
+            </div>
+        `;
+
+        // Footer 按鈕邏輯
+        let footHtml = '';
+        if (isUnlocked) {
+            footHtml = ui.btn.secondary('已購買', "act.closeModal('m-overlay')", 'u-btn-block');
+        } else {
+            const myPaid = gs.paidGem || 0;
+            const myFree = gs.freeGem || 0;
+            const price = currentItem.price;
+            let canAfford = false;
+            let btnText = '';
+
+            if (currentItem.currencyType === 'paid') {
+                canAfford = myPaid >= price;
+                btnText = canAfford ? `立即購買 (-${price}💠)` : `儲值鑽不足 (需 ${price})`;
+            } else {
+                canAfford = (myFree + myPaid) >= price;
+                btnText = canAfford ? `立即購買 (-${price}💎)` : `鑽石不足 (需 ${price})`;
             }
-        });
+
+            const btnClass = canAfford ? 'u-btn-block' : 'u-btn-block u-btn-secondary';
+            footHtml = ui.btn.primary(btnText, `SettingsEngine.buyItem('${currentItem.id}')`, btnClass);
+        }
+
+        view.renderModal('🛒 模式商店', bodyHtml, footHtml, 'overlay');
     },
+
+    // 4. 重置資料
+    resetData: () => {
+        const body = `<div style="padding:20px; text-align:center; color:#d32f2f; font-weight:bold;">⚠️ 確定要重置所有資料嗎？<br>(此操作不可復原)</div>`;
+        const footer = `
+            ${ui.btn.secondary('取消', "act.closeModal('m-system')", 'u-btn-block')}
+            ${ui.btn.danger('確定重置', "SettingsEngine.performReset()", 'u-btn-block')}
+        `;
+        view.renderModal('危險操作', body, footer, 'system');
+    },
+
+    performReset: () => {
+        act.closeModal('m-system');
+        window.isResetting = true;
+        localStorage.clear();
+        location.reload();
+    },
+
+    // 5. 匯出存檔
     exportData: () => {
         const str = JSON.stringify(window.GlobalState);
-        act.prompt("複製以下代碼：", str);
+        const body = `
+            <div style="padding:10px;">
+                <p style="font-size:0.9rem; color:#666; margin-bottom:5px;">請複製以下代碼：</p>
+                ${ui.input.textarea(str, '', '', 'inp-export-area')}
+            </div>`;
+        const footer = ui.btn.primary('關閉', "act.closeModal('m-overlay')", 'u-btn-block');
+        view.renderModal('匯出存檔', body, footer, 'overlay');
+        setTimeout(() => { const el = document.getElementById('inp-export-area'); if(el) el.select(); }, 200);
     },
+
+    // 6. 匯入存檔
     importData: () => {
-        act.prompt("請貼上存檔代碼：", "", (val) => {
-            if (!val) return;
-            try {
-                const data = JSON.parse(val);
-                if (data && (data.lv || data.gold || data.settings)) {
-                    window.GlobalState = data;
-                    act.save();
-                    act.toast("✅ 匯入成功，正在重載...");
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    act.toast("❌ 存檔格式錯誤");
-                }
-            } catch (e) {
-                act.toast("❌ 無效的 JSON");
-            }
-        });
+        const body = `
+            <div style="padding:10px;">
+                <p style="font-size:0.9rem; color:#666; margin-bottom:5px;">請貼上存檔代碼：</p>
+                ${ui.input.textarea('', '在此貼上 JSON 代碼...', '', 'inp-import-area')}
+            </div>`;
+        const footer = ui.btn.primary('確認匯入', "SettingsEngine.processImport()", 'u-btn-block');
+        view.renderModal('匯入存檔', body, footer, 'overlay');
     },
+
+    processImport: () => {
+        const el = document.getElementById('inp-import-area');
+        const val = el ? el.value : '';
+        if (!val) { act.toast("❌ 內容為空"); return; }
+        try {
+            const data = JSON.parse(val);
+            if (data && (data.lv || data.gold || data.settings)) {
+                window.GlobalState = data;
+                act.save();
+                act.closeModal('m-overlay');
+                act.toast("✅ 匯入成功，正在重載...");
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                act.toast("❌ 存檔格式錯誤");
+            }
+        } catch (e) {
+            act.toast("❌ 無效的 JSON 格式");
+        }
+    },
+
+    // 7. 卡路里設定
     checkCal: () => {
         const chk = document.getElementById('set-cal-mode');
         if (chk && chk.checked) {
-            act.prompt("設定每日目標熱量 (Kcal)", "2000", (val) => {
-                const limit = parseInt(val);
-                if (limit > 0) window.GlobalState.settings.calMax = limit;
-                else { chk.checked = false; act.toast("❌ 無效數值"); }
-            });
+            const currentMax = window.GlobalState.settings?.calMax || 2000;
+            const body = `
+                <div style="padding:20px; text-align:center;">
+                    <p style="margin-bottom:10px;">設定每日目標熱量 (Kcal)</p>
+                    ${ui.input.number(currentMax, '例如: 2000', '', 5, 'inp-cal-target')}
+                </div>
+            `;
+            const cancelAction = "document.getElementById('set-cal-mode').checked = false; act.closeModal('m-overlay');";
+            const footer = `
+                ${ui.btn.secondary('取消', cancelAction, 'u-btn-block')}
+                ${ui.btn.primary('確定', "SettingsEngine.saveCal()", 'u-btn-block')}
+            `;
+            view.renderModal('🔥 卡路里設定', body, footer, 'overlay');
+            setTimeout(() => {
+                const closeBtn = document.querySelector('#m-overlay .btn-close-red');
+                if(closeBtn) closeBtn.onclick = () => { eval(cancelAction); };
+            }, 50);
+        }
+    },
+
+    saveCal: () => {
+        const el = document.getElementById('inp-cal-target');
+        const limit = parseInt(el.value);
+        if (limit > 0) {
+            if(!window.GlobalState.settings) window.GlobalState.settings = {};
+            window.GlobalState.settings.calMax = limit;
+            act.toast(`✅ 目標已更新: ${limit} Kcal`);
+            act.closeModal('m-overlay');
+        } else {
+            act.toast("❌ 請輸入有效的數值");
         }
     }
 };
-
-window.SettingsEngine = SettingsEngine;
-
-// View: 設定視窗
-window.view = window.view || {};
 
 view.renderSettings = () => {
     const s = window.GlobalState.settings || {};
     const unlocks = window.GlobalState.unlocks || {};
-    const mode = s.mode || 'adventurer';
     
-    // 模式選擇
-    const htmlMode = `
-        <label class="section-title">遊戲模式</label>
-        ${ui.input.select([
-            {value:'adventurer', label:'🛡️ 冒險者模式 (標準)'},
-            {value:'harem', label:'💕 后宮模式 (沈浸)'},
-            {value:'basic', label:'📊 基礎模式 (純數據)'}
-        ], mode, "", "set-mode")}
+    // 1. 構建遊戲模式選項
+    let modeOptions = [
+        {value:'adventurer', label:'🛡️ 冒險者模式 (標準)'},
+        {value:'basic', label:'📊 基礎模式 (純數據)'}
+    ];
+
+    // 動態加入：已解鎖的模式
+    if (unlocks.harem) modeOptions.splice(1, 0, {value:'harem', label:'💕 后宮模式 (沈浸)'});
+    if (unlocks.learning) modeOptions.push({value:'learning', label:'📚 語言學習模式 (Mix)'});
+
+    const currentMode = s.mode || 'adventurer';
+
+    // 核心設定區
+    const htmlCore = `
+        <label class="section-title">核心設定</label>
+        <div style="margin-bottom:15px;">
+            <div style="font-size:0.9rem; color:#666; margin-bottom:5px;">遊戲模式</div>
+            ${ui.input.select(modeOptions, currentMode, "", "set-mode")}
+        </div>
+        
+        <div onclick="SettingsEngine.openShopModal()" style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:1px solid #ffb300; background:#fff8e1; border-radius:8px; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:1.5rem;">🛒</span>
+                <div style="display:flex; flex-direction:column;">
+                    <span style="font-weight:bold; color:#f57f17; font-size:1rem;">前往模式商店</span>
+                    <span style="font-size:0.8rem; color:#888;">解鎖更多遊戲體驗</span>
+                </div>
+            </div>
+            <div style="font-size:1.2rem; color:#f57f17; font-weight:bold;">&gt;</div>
+        </div>
     `;
 
-    // 學習模式區塊
-    let htmlLearning = '';
-    if (unlocks.learningMode) {
-        htmlLearning = `
-            <div style="margin-top:15px; padding:10px; border:1px solid #ffd700; border-radius:8px; background:rgba(255,215,0,0.1);">
-                <div style="color:#f57f17; font-weight:bold; margin-bottom:5px;">📚 語言學習模組 (已擁有)</div>
-                <label style="display:flex; align-items:center; cursor:pointer;">
-                    <input type="checkbox" id="set-learning-mode" ${s.learningMode ? 'checked' : ''} style="width:18px; height:18px; margin-right:8px;">
-                    <span>啟用學習模式 (Mix Mode)</span>
+    // 微調開關區
+    const htmlTweaks = `
+        <div style="margin-top:20px;">
+            <label class="section-title">微調開關</label>
+            <div style="display:flex; gap:10px;">
+                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; background:#f5f5f5; border:1px solid #ddd; border-radius:8px; cursor:pointer;">
+                    <input type="checkbox" id="set-cal-mode" ${s.calMode?'checked':''} onchange="SettingsEngine.checkCal()" style="transform:scale(1.2);"> 
+                    <span style="font-weight:bold; color:#555;">🔥 卡路里</span>
+                </label>
+                <label style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; background:#f5f5f5; border:1px solid #ddd; border-radius:8px; cursor:pointer;">
+                    <input type="checkbox" id="set-strict-mode" ${s.strictMode?'checked':''} style="transform:scale(1.2);"> 
+                    <span style="font-weight:bold; color:#555;">⚡ 嚴格模式</span>
                 </label>
             </div>
-        `;
-    } else {
-        htmlLearning = `
-            <div style="margin-top:15px; padding:10px; border:1px dashed #aaa; border-radius:8px;">
-                <div style="color:#666; font-weight:bold; margin-bottom:5px;">📚 語言學習模組 (未解鎖)</div>
-                <button onclick="view.renderShop()" style="width:100%; padding:8px; background:linear-gradient(45deg, #ffb300, #f57f17); color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">
-                    🛒 前往模式商店
-                </button>
-            </div>
-        `;
-    }
-
-    // 一般開關
-    const htmlSwitches = `
-        <div style="display:flex; gap:15px; margin-top:15px;">
-            <label class="card-btn" style="flex:1; justify-content:center;">
-                <input type="checkbox" id="set-cal-mode" ${s.calMode?'checked':''} onchange="SettingsEngine.checkCal()"> 🔥 卡路里
-            </label>
-            <label class="card-btn" style="flex:1; justify-content:center;">
-                <input type="checkbox" id="set-strict-mode" ${s.strictMode?'checked':''}> ⚡ 嚴格模式
-            </label>
         </div>
     `;
 
-    // 資料管理
+    // 資料管理區 (新佈局：兩行，每行兩個按鈕平分)
     const htmlData = `
-        <div style="margin-top:20px; padding-top:10px; border-top:1px dashed #ccc;">
-            <label class="section-title">資料管理</label>
-            <div style="display:flex; gap:10px; margin-top:5px;">
-                ${ui.btn.secondary('匯出存檔', 'SettingsEngine.exportData()', 'u-btn-block')}
-                ${ui.btn.secondary('匯入存檔', 'SettingsEngine.importData()', 'u-btn-block')}
+        <div style="margin-top:25px; padding-top:15px; border-top:1px dashed #ccc;">
+            <label class="section-title">系統與資料</label>
+            
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <div style="flex:1;">${ui.btn.secondary('📥 匯入存檔', 'SettingsEngine.importData()', 'u-btn-block')}</div>
+                <div style="flex:1;">${ui.btn.secondary('📤 匯出存檔', 'SettingsEngine.exportData()', 'u-btn-block')}</div>
             </div>
-            <div style="margin-top:10px;">
-                ${ui.btn.danger('重置所有資料', 'SettingsEngine.resetData()', 'u-btn-block')}
+            
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">${ui.btn.danger('⚠️ 重置資料', 'SettingsEngine.resetData()', 'u-btn-block')}</div>
+                <div style="flex:1;">${ui.btn.ghost('🐞 Debug', 'act.debugDay()', 'u-btn-block')}</div>
             </div>
         </div>
     `;
     
-    const htmlDebug = `<div style="margin-top:10px;">${ui.btn.ghost('[Debug] 模擬跨日', 'act.debugDay()', 'u-btn-block')}</div>`;
-
-    const bodyHtml = `<div style="padding:5px;">${htmlMode}${htmlLearning}${htmlSwitches}${htmlData}${htmlDebug}</div>`;
+    const bodyHtml = `<div style="padding:10px 5px;">${htmlCore}${htmlTweaks}${htmlData}</div>`;
     const footHtml = `${ui.btn.primary('儲存設定', 'SettingsEngine.save()', 'u-btn-block')}`;
 
     view.renderModal('⚙️ 設定', bodyHtml, footHtml, 'panel');
-};
-
-// 模式商店 (獨立視窗)
-view.renderShop = () => {
-    act.closeModal('panel');
-    const gs = window.GlobalState;
-    if (!gs.gems) gs.gems = 0;
-
-    let modal = document.createElement('div');
-    modal.id = 'modal-shop';
-    modal.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10000; display:flex; justify-content:center; align-items:center;`;
-
-    modal.innerHTML = `
-        <div style="background:#fff; width:90%; max-width:380px; border-radius:12px; padding:25px; position:relative; text-align:center;">
-            <h2 style="color:#f57f17; margin-top:0;">🛒 模式商店</h2>
-            <div style="margin-bottom:20px; font-size:1.1rem; font-weight:bold;">持有: 💎 <span id="shop-gems">${gs.gems}</span></div>
-            
-            <div style="border:2px solid #ffb300; border-radius:10px; padding:15px; background:#fff8e1; margin-bottom:20px;">
-                <h3 style="margin:0 0 10px 0;">📚 語言學習模組</h3>
-                <p style="font-size:0.9rem; color:#666; margin-bottom:15px; line-height:1.5;">
-                    解鎖日、韓、英、法、西多語言劇情。<br>
-                    開啟獨家 <b>[MIX] 混沌模式</b>。
-                </p>
-                <div style="font-size:1.4rem; font-weight:bold; color:#f57f17; margin-bottom:15px;">💎 100</div>
-                <button onclick="SettingsEngine.buyLearningMode()" style="width:100%; padding:12px; background:#ffb300; color:#000; font-weight:bold; border:none; border-radius:8px; cursor:pointer; font-size:1rem;">立即購買</button>
-            </div>
-            
-            <button onclick="SettingsEngine.addTestGems()" style="font-size:0.8rem; color:#999; background:none; border:none; cursor:pointer; margin-bottom:15px;">(測試) 領取鑽石</button>
-            <div><button onclick="this.closest('#modal-shop').remove(); view.renderSettings();" style="background:none; border:none; color:#666; text-decoration:underline; cursor:pointer;">返回設定</button></div>
-        </div>
-    `;
-    document.body.appendChild(modal);
 };

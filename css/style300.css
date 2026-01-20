@@ -341,7 +341,7 @@ html, body {
 .expand-date-badge { flex-shrink: 0; font-size: 0.75rem; color: #888; background: #f0f0f0; padding: 2px 8px; border-radius: 10px; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
 
 /* Modals */
-.mask { position: absolute !important; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: var(--z-mask); display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+.mask { position: fixed !important; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: var(--z-mask); display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
 .mask.active { display: flex !important; }
 #m-system { z-index: var(--z-sys-mask) !important; }
 #m-system .modal { z-index: var(--z-sys-modal) !important; border-color: var(--color-danger); }
@@ -354,7 +354,7 @@ html, body {
 .btn-close-red { background: transparent; border: none; color: #ef5350; font-size: 1.6rem; font-weight: bold; line-height: 1; cursor: pointer; padding: 0 5px; transition: transform 0.2s; }
 .btn-close-red:active { transform: scale(0.9); }
 
-.u-toast { position: absolute !important; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: var(--z-toast); background: rgba(0,0,0,0.85); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; pointer-events: none; white-space: nowrap; border: 1px solid var(--color-gold); opacity: 0; transition: opacity 0.3s; }
+.u-toast { position: fixed !important; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: var(--z-toast); background: rgba(0,0,0,0.85); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; pointer-events: none; white-space: nowrap; border: 1px solid var(--color-gold); opacity: 0; transition: opacity 0.3s; }
 .u-toast.show { opacity: 1; }
 
 /* --------------------------------------------------------------------------
@@ -386,11 +386,29 @@ html, body {
 }
 .char-stage img:active { transform: scale(0.95); }
 .char-placeholder { font-size: 10rem; }
-#btn-story-entry { flex-shrink: 0; margin-top: 10px; }
+#btn-story-entry {
+    /* 1. 變窄 (Narrower) */
+    width: 60% !important;        /* 設定寬度為 60% (原本是 100%)，你可以改這個數字 */
+    
+    /* 2. 水平置中 (Centering) */
+    margin-left: auto !important; /* 因為變窄了，所以要自動計算左邊距 */
+    margin-right: auto !important;/* 因為變窄了，所以要自動計算右邊距 */
+    display: block;               /* 確保置中生效 */
 
+    /* 3. 變高 (Higher) */
+	margin-top: -30px !important;
+    margin-bottom: 25px;          /* 距離底部多 50px 的空間，你可以加大這個數字讓它飛更高 */
+    
+    /* 4. 外觀美化 (保持原本的質感) */
+    padding: 12px 0;              /* 增加厚度 */
+    font-size: 1.1rem;            /* 字體大小 */
+    font-weight: bold;
+    border-radius: 25px;          /* 讓它變圓一點，比較好看 */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* 加點陰影 */
+}
 /* --- [Page: Stats & Calorie] --- */
 .stats-header-area { background: transparent; padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.1); position: relative; }
-.dynamic-display-box { height: 260px; width: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+.dynamic-display-box { height: 200px; width: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
 .stats-chart-container { background: transparent !important; box-shadow: none !important; margin: 0 auto; padding: 0; height: 100%; width: 100%; display: flex; justify-content: center; align-items: center; }
 #radar { max-width: 100%; max-height: 100%; display: block; }
 
